@@ -936,6 +936,23 @@
         canvas.toBlob(async (blob) => {
           if (!blob) return alert('画像の生成に失敗しました');
 
+          // 1. 対象メンバーの現在の情報（旧アバターURL）を取得
+          const member = allMembers.find(m => m.id === currentTargetMemberIdForAvatar);
+      
+          // 2. 旧画像が存在する場合は Supabase Storage から削除
+          if (member && member.avatar_url) {
+            try {
+              // URLからファイル名（パス）だけを取り出す
+              const oldFileName = member.avatar_url.split('/').pop();
+              if (oldFileName) {
+                await db.storage.from('avatars').remove([oldFileName]);
+              }
+            } catch (removeErr) {
+              console.warn('旧画像の削除に失敗しました（スキップして続行します）:', removeErr);
+            }
+          }
+
+          // 3. 新しいファイル名を生成してアップロード
           const fileName = `avatar_${currentTargetMemberIdForAvatar}_${Date.now()}.jpg`;
 
           const { data, error } = await db.storage.from('avatars').upload(fileName, blob, {
@@ -945,6 +962,7 @@
 
           if (error) throw error;
 
+          // 4. 新しい公開URLを取得して DB を更新
           const { data: publicUrlData } = db.storage.from('avatars').getPublicUrl(fileName);
           const avatarUrl = publicUrlData.publicUrl;
 
@@ -966,12 +984,21 @@
 
     async function removeAvatar(memberId) {
       if (!confirm('アバター画像を削除してデフォルトに戻しますか？')) return;
-      await db.from('members').update({ avatar_url: null }).eq('id', memberId);
-      await fetchAllData();
-      renderMasterMemberList();
-      renderMain();
-      if (activeTabName === 'detail') loadDetailSession(currentSessionId);
+
+      const member = allMembers.find(m => m.id === memberId);
+      if (member && member.avatar_url) {
+        const oldFileName = member.avatar_url.split('/').pop();
+      if (oldFileName) {
+        await db.storage.from('avatars').remove([oldFileName]);
+      }
     }
+
+  await db.from('members').update({ avatar_url: null }).eq('id', memberId);
+  await fetchAllData();
+  renderMasterMemberList();
+  renderMain();
+  if (activeTabName === 'detail') loadDetailSession(currentSessionId);
+}
 
     async function addMasterMember() {
       const name = document.getElementById('newMasterName').value.trim();
