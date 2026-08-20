@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>うんち管理</title>
+  <title>麻雀スコア管理 (雀簿風)</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
@@ -108,13 +108,67 @@
     .full-modal.active { display: flex; }
     
     .cropper-view-box, .cropper-face { border-radius: 50%; }
+
+    /* ヘッダー右上のメンバー管理ボタン専用スタイル */
+    .header-btn {
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8); /* 鮮やかなブルーのグラデーション */
+      color: #ffffff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 20px; /* 丸みを持たせてモダンなカプセル形状に */
+      font-weight: bold;
+      font-size: 0.78rem;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25); /* ボタンらしい立体感 */
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* タップ・クリックしたときの押し込み感 */
+    .header-btn:active {
+      transform: scale(0.94);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      filter: brightness(0.9);
+    }
+
+    /* 対局作成モーダル専用スタイル */
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #4a5568;
+      margin-bottom: 4px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: #f8fafc;
+      outline: none;
+    }
+    .form-input:focus {
+      border-color: #2563eb;
+      background: white;
+    }
+
   </style>
 </head>
 <body>
 
   <header>
     <span id="header-title">対局履歴</span>
-    <button class="btn btn-sm" id="header-action-btn" onclick="openMasterMemberModal()">👥 メンバー管理</button>
+    <button class="header-btn" id="header-action-btn" onclick="openMasterMemberModal()">
+      <span>👥</span> メンバー管理
+    </button>
   </header>
 
   <div class="period-filter-container" id="period-filter-bar">
@@ -348,6 +402,31 @@
     </div>
   </div>
 
+  <!-- 対局日作成モーダル -->
+  <div class="modal" id="createSessionModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-weight:bold; font-size:0.95rem;">🀄️ 新しい対局日を作成</span>
+        <span onclick="closeModal('createSessionModal')" style="cursor:pointer; font-weight:bold; font-size:1.1rem;">✕</span>
+      </div>
+      
+      <div class="form-group">
+        <label class="form-label">対局日</label>
+        <input type="date" id="newSessionDate" class="form-input">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">対局タイトル（任意）</label>
+        <input type="text" id="newSessionTitle" class="form-input" placeholder="例: 4麻セット、第3回リーグ戦">
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:16px;">
+        <button class="btn btn-secondary" style="flex:1; padding:8px;" onclick="closeModal('createSessionModal')">キャンセル</button>
+        <button class="btn" style="flex:1; padding:8px; background:#2563eb;" onclick="submitNewSession()">作成する</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 画像トリミング用モーダル -->
   <div class="full-modal" id="cropModal">
     <div style="color:white; font-size:0.85rem; font-weight:bold; margin-bottom:8px;">ドラッグ・ピンチ操作で枠位置を調整</div>
@@ -490,6 +569,7 @@
       const now = new Date();
       const currentYear = now.getFullYear();
       const currentMonth = `${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const todayStr = now.toISOString().split('T')[0];
 
       if (type === 'half') {
         const currMonthNum = now.getMonth() + 1;
@@ -505,10 +585,11 @@
       } else if (type === 'month') {
         area.innerHTML = `<input type="month" id="filter-month" class="period-input" value="${currentMonth}" onchange="triggerFilterUpdate()">`;
       } else if (type === 'range') {
+        // 日付指定（YYYY-MM-DD）のカレンダーピッカーに変更
         area.innerHTML = `
-          <input type="month" id="filter-start-month" class="period-input" value="${currentMonth}" onchange="triggerFilterUpdate()">
+          <input type="date" id="filter-start-date" class="period-input" value="${currentYear}-01-01" onchange="triggerFilterUpdate()">
           <span style="font-size:0.7rem;">〜</span>
-          <input type="month" id="filter-end-month" class="period-input" value="${currentMonth}" onchange="triggerFilterUpdate()">`;
+          <input type="date" id="filter-end-date" class="period-input" value="${todayStr}" onchange="triggerFilterUpdate()">`;
       }
       triggerFilterUpdate();
     }
@@ -541,10 +622,10 @@
         const inputMonth = document.getElementById('filter-month')?.value;
         return inputMonth ? yyyymm === inputMonth : true;
       } else if (type === 'range') {
-        const startMonth = document.getElementById('filter-start-month')?.value;
-        const endMonth = document.getElementById('filter-end-month')?.value;
-        if (startMonth && yyyymm < startMonth) return false;
-        if (endMonth && yyyymm > endMonth) return false;
+        const startDate = document.getElementById('filter-start-date')?.value;
+        const endDate = document.getElementById('filter-end-date')?.value;
+        if (startDate && dateStr < startDate) return false;
+        if (endDate && dateStr > endDate) return false;
         return true;
       }
       return true;
@@ -734,20 +815,32 @@
       renderStats();
     }
 
-    async function createNewSession() {
+    // モーダルを開いて初期値をセット
+    function createNewSession() {
       const todayStr = new Date().toISOString().split('T')[0];
-      const dateStr = prompt("対局日を入力してください (YYYY-MM-DD):", todayStr);
-      if (!dateStr) return;
+      document.getElementById('newSessionDate').value = todayStr;
+      document.getElementById('newSessionTitle').value = "4麻セット";
+      document.getElementById('createSessionModal').classList.add('active');
+    }
 
-      const title = prompt("対局タイトル（任意）:", "4麻セット");
-      if (title === null) return;
+    // モーダルの「作成する」ボタンを押したときの処理
+    async function submitNewSession() {
+      const dateStr = document.getElementById('newSessionDate').value;
+      const title = document.getElementById('newSessionTitle').value.trim() || "4麻セット";
+
+      if (!dateStr) {
+        alert("日付を選択してください。");
+        return;
+      }
 
       const { data, error } = await db.from('sessions').insert([{ play_date: dateStr, title }]).select();
       
       if (error) {
-        alert("保存に失敗しました。日付の形式（YYYY-MM-DD）を確認してください。");
+        alert("保存に失敗しました。");
         return;
       }
+
+      closeModal('createSessionModal');
 
       if (data && data.length > 0) {
         currentSessionId = data[0].id;
