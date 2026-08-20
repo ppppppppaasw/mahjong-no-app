@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>麻雀スコア管理 (雀簿風)</title>
+  <title>うんち管理</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
@@ -819,7 +819,7 @@
     function createNewSession() {
       const todayStr = new Date().toISOString().split('T')[0];
       document.getElementById('newSessionDate').value = todayStr;
-      document.getElementById('newSessionTitle').value = "4麻セット";
+      document.getElementById('newSessionTitle').value = "NewKawaii";
       document.getElementById('createSessionModal').classList.add('active');
     }
 
@@ -842,11 +842,9 @@
 
       closeModal('createSessionModal');
 
-      if (data && data.length > 0) {
-        currentSessionId = data[0].id;
-        currentSessionMembers = []; 
-        switchTab('detail');
-      }
+      // データを最新化してメイン画面を更新（メイン画面にとどまる）
+      await fetchAllData();
+      renderMain();
     }
 
     function openSessionDetail(sId) {
