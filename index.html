@@ -87,7 +87,7 @@
     .rule-label { color: #64748b; }
     .rule-val { font-weight: bold; color: #1e293b; }
 
-    .navbar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 5px 0; z-index: 100; }
+    .navbar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border-color); display: flex; justify-around: space-around; padding: 5px 0; z-index: 100; }
     .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 0.68rem; color: #64748b; cursor: pointer; border: none; background: none; flex: 1; }
     .nav-item.active { color: var(--header-bg); font-weight: bold; }
 
@@ -232,13 +232,13 @@
           <div class="stat-card">
             <div style="font-size:0.65rem; color:#64748b;">平均持ち点 (点)</div>
             <div id="stat-avg-score" style="font-size:0.85rem; font-weight:bold;">-</div>
-            <div id="stat-sd-score" style="font-size:0.6rem; color:#64748b;">SD: -</div>
+            <div id="stat-sd-score" style="font-size:0.6rem; color:#64748b;">CV: -</div>
           </div>
 
           <div class="stat-card">
             <div style="font-size:0.65rem; color:#64748b;">トップ時平均 (点)</div>
             <div id="stat-top-avg-score" style="font-size:0.85rem; font-weight:bold;">-</div>
-            <div id="stat-top-sd-score" style="font-size:0.6rem; color:#64748b;">SD: -</div>
+            <div id="stat-top-sd-score" style="font-size:0.6rem; color:#64748b;">CV: -</div>
           </div>
         </div>
 
@@ -443,6 +443,20 @@
       setupPeriodUI();
       renderMain();
       renderStats();
+
+      // ★SupabaseのRealtime（自動更新）を有効化
+      db.channel('schema-db-changes')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public' },
+          async () => {
+            await fetchAllData();
+            if (activeTabName === 'main') renderMain();
+            if (activeTabName === 'detail') loadDetailSession(currentSessionId);
+            if (activeTabName === 'stats') renderStats();
+          }
+        )
+        .subscribe();
     }
 
     async function fetchAllData() {
@@ -1425,9 +1439,9 @@
         document.getElementById('stat-rentai-rate').innerText = '- %';
         document.getElementById('stat-avoid-last-rate').innerText = '- %';
         document.getElementById('stat-avg-score').innerText = '-';
-        document.getElementById('stat-sd-score').innerText = 'SD: -';
+        document.getElementById('stat-sd-score').innerText = 'CV: -';
         document.getElementById('stat-top-avg-score').innerText = '-';
-        document.getElementById('stat-top-sd-score').innerText = 'SD: -';
+        document.getElementById('stat-top-sd-score').innerText = 'CV: -';
         document.getElementById('stats-vs-list').innerHTML = '選択期間内の対局データがありません';
 
         if (trendChart) trendChart.destroy();
@@ -1438,11 +1452,14 @@
       const r3Rate = ((st.ranks[2] / st.gamesCount) * 100).toFixed(1);
       const r4Rate = ((st.ranks[3] / st.gamesCount) * 100).toFixed(1);
 
-      const sdRaw = Math.round(calculateSD(st.rawList, st.avgRaw));
+      // --- 変動係数 (CV = SD / Mean) の計算 ---
+      const sdRaw = calculateSD(st.rawList, st.avgRaw);
+      const cvRaw = st.avgRaw > 0 ? ((sdRaw / st.avgRaw) * 100).toFixed(1) : '0.0';
 
-      let topSdRaw = 0;
-      if (st.ranks[0] > 0) {
-        topSdRaw = Math.round(calculateSD(st.topRawList, st.topAvgRaw));
+      let cvTopRaw = '0.0';
+      if (st.ranks[0] > 0 && st.topAvgRaw > 0) {
+        const topSdRaw = calculateSD(st.topRawList, st.topAvgRaw);
+        cvTopRaw = ((topSdRaw / st.topAvgRaw) * 100).toFixed(1);
       }
 
       document.getElementById('stat-avg-rank').innerText = `${st.avgRank.toFixed(2)} 位`;
@@ -1452,10 +1469,10 @@
       document.getElementById('stat-avoid-last-rate').innerText = `${st.avoidLastRate.toFixed(1)} %`;
 
       document.getElementById('stat-avg-score').innerText = `${st.avgRaw.toLocaleString()} 点`;
-      document.getElementById('stat-sd-score').innerText = `SD: ±${sdRaw.toLocaleString()}`;
+      document.getElementById('stat-sd-score').innerText = `CV: ${cvRaw}%`;
 
       document.getElementById('stat-top-avg-score').innerText = st.ranks[0] > 0 ? `${st.topAvgRaw.toLocaleString()} 点` : '-';
-      document.getElementById('stat-top-sd-score').innerText = st.ranks[0] > 0 ? `SD: ±${topSdRaw.toLocaleString()}` : 'SD: -';
+      document.getElementById('stat-top-sd-score').innerText = st.ranks[0] > 0 ? `CV: ${cvTopRaw}%` : 'CV: -';
 
       /* 対人戦績：相手画像は入れずシンプルに「vs 名前」 */
       const vsList = document.getElementById('stats-vs-list');
