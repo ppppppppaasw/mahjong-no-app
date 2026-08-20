@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>麻雀スコア管理 (雀簿風)</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- 画像トリミングライブラリ (Cropper.js) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #dce3db;
+      --card-bg: #eaf0e8;
+      --header-bg: #2d3b32;
+      --text-main: #2d3748;
+      --plus-color: #1e40af;
+      --minus-color: #991b1b;
+      --border-color: #cbd5e1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 60px; overflow-x: hidden; font-size: 0.82rem; }
+
+    header { background-color: var(--header-bg); color: white; padding: 10px 12px; font-weight: bold; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; }
+    
+    .period-filter-container { 
+      position: sticky; 
+      top: 0; 
+      z-index: 20; 
+      background: #cdd8ca; 
+      padding: 6px 12px; 
+      border-bottom: 1px solid var(--border-color); 
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .period-row { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+    .period-select, .period-input { padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.75rem; background: white; }
+
+    .container { max-width: 600px; margin: 0 auto; padding: 8px; }
+
+    .btn { background: var(--header-bg); color: white; border: none; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 0.8rem; cursor: pointer; }
+    .btn-secondary { background: #64748b; }
+    .btn-danger { background: #991b1b; color: white; }
+    .btn-sm { font-size: 0.7rem; padding: 3px 6px; }
+
+    .card { background: var(--card-bg); border-radius: 8px; border: 1px solid #c2cdc0; padding: 8px 10px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 4px; }
+    .card-title { font-weight: bold; font-size: 0.85rem; }
+
+    .summary-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
+    .summary-item { background: white; border-radius: 6px; padding: 6px 8px; min-width: 72px; text-align: center; border: 1px solid var(--border-color); flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .summary-name { font-size: 0.7rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65px; }
+    .summary-score { font-size: 0.8rem; font-weight: bold; }
+
+    .session-scores-list { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; background: white; padding: 6px; border-radius: 5px; border: 1px solid var(--border-color); }
+    .session-score-item { font-size: 0.75rem; display: flex; align-items: center; gap: 3px; }
+
+    .pt-plus { color: var(--plus-color); font-weight: bold; }
+    .pt-minus { color: var(--minus-color); font-weight: bold; }
+
+    /* アバター用スタイル */
+    .avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; display: inline-flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 0.75rem; flex-shrink: 0; }
+    .avatar-clickable { cursor: pointer; transition: transform 0.1s; }
+    .avatar-clickable:active { transform: scale(0.92); }
+    .avatar-sm { width: 18px; height: 18px; font-size: 0.6rem; }
+
+    /* テーブル */
+    table { width: 100%; border-collapse: collapse; background: white; text-align: center; font-size: 0.72rem; }
+    th, td { border: 1px solid var(--border-color); padding: 4px 1px; min-width: 48px; }
+    th { background: #dbe4d8; vertical-align: middle; }
+    .score-cell { cursor: pointer; height: 48px; vertical-align: middle; line-height: 1.15; }
+
+    /* 戦績 */
+    .rank-item { background: white; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background-color 0.2s; }
+    .rank-item:active { background-color: #e2e8f0; }
+    .rank-num { font-weight: bold; width: 20px; color: #64748b; font-size: 0.8rem; }
+    .rank-name { font-weight: bold; flex-grow: 1; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+    .stats-box { background: white; border-radius: 8px; padding: 10px; margin-top: 8px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 6px; text-align: center; }
+    .stat-card { background: #f8fafc; padding: 6px; border-radius: 5px; border: 1px solid #e2e8f0; }
+
+    .rule-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; font-size: 0.78rem; }
+    .rule-title { font-weight: bold; color: var(--header-bg); border-bottom: 2px solid #cbd5e1; padding-bottom: 2px; margin-bottom: 6px; font-size: 0.82rem; }
+    .rule-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .rule-label { color: #64748b; }
+    .rule-val { font-weight: bold; color: #1e293b; }
+
+    .navbar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 5px 0; z-index: 100; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 0.68rem; color: #64748b; cursor: pointer; border: none; background: none; flex: 1; }
+    .nav-item.active { color: var(--header-bg); font-weight: bold; }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: flex-end; z-index: 200; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 12px 12px 0 0; padding: 14px; max-height: 85vh; overflow-y: auto; }
+    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+    .key { padding: 10px; font-size: 1rem; font-weight: bold; background: #f1f5f9; border-radius: 6px; text-align: center; cursor: pointer; user-select: none; }
+    .key:active { background: #cbd5e1; }
+    .key.disabled { opacity: 0.3; pointer-events: none; }
+    .key.submit { background: var(--header-bg); color: white; grid-column: span 3; padding: 10px; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* 全画面モーダル（画像トリミング・拡大表示用） */
+    .full-modal { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); z-index: 300; justify-content: center; align-items: center; flex-direction: column; }
+    .full-modal.active { display: flex; }
+    
+    .cropper-view-box, .cropper-face { border-radius: 50%; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span id="header-title">対局履歴</span>
+    <button class="btn btn-sm" id="header-action-btn" onclick="openMasterMemberModal()">👥 メンバー管理</button>
+  </header>
+
+  <div class="period-filter-container" id="period-filter-bar">
+    <div class="period-row">
+      <span style="font-size:0.7rem; font-weight:bold; color:#4a5568;">期間:</span>
+      <select id="period-type-select" class="period-select" onchange="onPeriodTypeChange()">
+        <option value="all">全期間</option>
+        <option value="half">半期指定</option>
+        <option value="year">年指定</option>
+        <option value="month">年月指定</option>
+        <option value="range">任意期間 (年月〜年月)</option>
+      </select>
+      <span id="filter-inputs-area" style="display:flex; gap:3px; align-items:center;"></span>
+    </div>
+  </div>
+
+  <div class="container">
+
+<!-- 1. メイン画面 -->
+    <div id="tab-main" class="tab-content active">
+      <!-- 期間内サマリーの見出し（ボタンを外してスッキリ配置） -->
+      <div style="font-size:0.82rem; font-weight:bold; margin-bottom:8px;">期間内サマリー</div>
+
+      <div class="summary-scroll" id="main-summary-scroll"></div>
+
+      <!-- 対局セット一覧の見出し ＋ ボタンを横並びに配置 -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="font-size:0.8rem; font-weight:bold; color:#4a5568;">対局一覧</span>
+        <button class="btn btn-sm" onclick="createNewSession()">＋ 新しい対局日を作成</button>
+      </div>
+
+      <div id="session-card-list"></div>
+    </div>
+
+    <!-- 2. 詳細画面 -->
+    <div id="tab-detail" class="tab-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <button class="btn btn-sm btn-secondary" onclick="switchTab('main')">← メインに戻る</button>
+        <button class="btn btn-sm btn-secondary" onclick="openSettingsModal()">⚙️ 対局設定</button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title" id="detail-session-title">対局詳細</span>
+          <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;">
+            <button class="btn btn-sm" onclick="openAddSessionMemberModal()">＋ メンバー</button>
+            <button class="btn btn-sm btn-secondary" onclick="addNewGame()">＋ 半荘追加</button>
+          </div>
+        </div>
+        <p style="font-size: 0.65rem; color: #64748b; margin-bottom: 6px;">マス目をタップしてスコアを入力</p>
+
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr id="detail-header-row">
+                <th style="width: 38px; min-width: 38px;">半荘</th>
+              </tr>
+            </thead>
+            <tbody id="detail-score-body"></tbody>
+            <tfoot>
+              <tr style="background: #dbe4d8; font-weight: bold;" id="detail-total-row">
+                <td>計</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. 戦績画面 -->
+    <div id="tab-stats" class="tab-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px;">
+        <span style="font-size: 0.8rem; font-weight: bold; color: #4a5568;">ランキング表示</span>
+        <select id="stats-sort-select" class="period-select" onchange="renderStatsRankList()">
+          <option value="totalPt">通算Pt (高い順)</option>
+          <option value="avgRank">平均順位 (良い順)</option>
+          <option value="topRate">トップ率 (高い順)</option>
+          <option value="rentaiRate">連対率 (高い順)</option>
+          <option value="avoidLastRate">ラス回避率 (高い順)</option>
+          <option value="avgRaw">平均持ち点 (高い順)</option>
+          <option value="topAvgRaw">トップ時平均持ち点 (高い順)</option>
+        </select>
+      </div>
+
+      <div id="stats-rank-list"></div>
+
+      <div class="stats-box" id="personal-stats-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+          <span style="font-weight: bold; font-size: 0.88rem;">📊 個人スタッツ</span>
+          <select id="stats-member-select" onchange="renderStatsDetail()" class="period-select"></select>
+        </div>
+
+        <div style="margin-top: 8px; height: 160px; position: relative;">
+          <canvas id="scoreTrendChart"></canvas>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div style="font-size:0.65rem; color:#64748b;">平均順位</div>
+            <div id="stat-avg-rank" style="font-size:0.9rem; font-weight:bold;">- 位</div>
+          </div>
+          <div class="stat-card">
+            <div style="font-size:0.65rem; color:#64748b;">トップ率</div>
+            <div id="stat-top-rate" style="font-size:0.9rem; font-weight:bold;">- %</div>
+            <div id="stat-sub-ranks" style="font-size:0.58rem; color:#64748b; margin-top:1px;">-</div>
+          </div>
+          <div class="stat-card">
+            <div style="font-size:0.65rem; color:#64748b;">連対率</div>
+            <div id="stat-rentai-rate" style="font-size:0.9rem; font-weight:bold;">- %</div>
+          </div>
+          <div class="stat-card">
+            <div style="font-size:0.65rem; color:#64748b;">ラス回避率</div>
+            <div id="stat-avoid-last-rate" style="font-size:0.9rem; font-weight:bold;">- %</div>
+          </div>
+
+          <div class="stat-card">
+            <div style="font-size:0.65rem; color:#64748b;">平均持ち点 (点)</div>
+            <div id="stat-avg-score" style="font-size:0.85rem; font-weight:bold;">-</div>
+            <div id="stat-sd-score" style="font-size:0.6rem; color:#64748b;">SD: -</div>
+          </div>
+
+          <div class="stat-card">
+            <div style="font-size:0.65rem; color:#64748b;">トップ時平均 (点)</div>
+            <div id="stat-top-avg-score" style="font-size:0.85rem; font-weight:bold;">-</div>
+            <div id="stat-top-sd-score" style="font-size:0.6rem; color:#64748b;">SD: -</div>
+          </div>
+        </div>
+
+        <div style="font-weight: bold; font-size: 0.8rem; margin-top: 10px; margin-bottom: 4px;">対人戦績 (1vs1 持ち点差)</div>
+        <div id="stats-vs-list" style="font-size: 0.75rem; background: #f8fafc; border-radius: 5px; padding: 6px;"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <nav class="navbar">
+    <button class="nav-item active" onclick="switchTab('main')">
+      <span style="font-size:1.1rem;">🏠</span>
+      <span>メイン</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('stats')">
+      <span style="font-size:1.1rem;">📊</span>
+      <span>戦績・統計</span>
+    </button>
+  </nav>
+
+  <!-- マスターメンバー管理モーダル -->
+  <div class="modal" id="masterMemberModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+        <span style="font-weight:bold; font-size:0.9rem;">👥 全メンバー一覧（マスター管理）</span>
+        <span onclick="closeModal('masterMemberModal')" style="cursor:pointer; font-weight:bold;">✕</span>
+      </div>
+      <div style="display:flex; gap:6px; margin-bottom:10px;">
+        <input type="text" id="newMasterName" placeholder="新しいメンバー名" style="flex-grow:1; padding:6px; border:1px solid #cbd5e1; border-radius:5px; font-size:0.8rem;">
+        <button class="btn btn-sm" onclick="addMasterMember()">追加</button>
+      </div>
+      <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="handleAvatarSelected(event)">
+      <div id="masterMemberList" style="max-height:280px; overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="addSessionMemberModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+        <span style="font-weight:bold; font-size:0.9rem;">対局メンバー選択</span>
+        <span onclick="closeModal('addSessionMemberModal')" style="cursor:pointer; font-weight:bold;">✕</span>
+      </div>
+      <div id="sessionMemberSelectList" style="max-height:240px; overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="settingsModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <span style="font-weight:bold; font-size:0.9rem;">⚙️ 対局ルール・計算設定</span>
+        <span onclick="closeModal('settingsModal')" style="cursor:pointer; font-weight:bold;">✕</span>
+      </div>
+
+      <div class="rule-box">
+        <div class="rule-title">基本ルール</div>
+        <div class="rule-row"><span class="rule-label">配給原点 (持ち点):</span><span class="rule-val">25,000 点</span></div>
+        <div class="rule-row"><span class="rule-label">集計基準点:</span><span class="rule-val">25,000 点</span></div>
+        <div class="rule-row"><span class="rule-label">オカ:</span><span class="rule-val">なし</span></div>
+        <div class="rule-row"><span class="rule-label">ゲーム種別:</span><span class="rule-val">4人打ち東南戦</span></div>
+      </div>
+
+      <div class="rule-box">
+        <div class="rule-title">順位点（ウマ）</div>
+        <div class="rule-row"><span class="rule-label">1位（トップ）:</span><span class="rule-val pt-plus">+30.0 P</span></div>
+        <div class="rule-row"><span class="rule-label">2位:</span><span class="rule-val pt-plus">+10.0 P</span></div>
+        <div class="rule-row"><span class="rule-label">3位:</span><span class="rule-val pt-minus">-10.0 P</span></div>
+        <div class="rule-row"><span class="rule-label">4位（ラス）:</span><span class="rule-val pt-minus">-30.0 P</span></div>
+      </div>
+
+      <button class="btn btn-sm" style="width:100%; padding:8px; margin-top:4px;" onclick="closeModal('settingsModal')">閉じる</button>
+    </div>
+  </div>
+
+  <div class="modal" id="inputModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div>
+          <span style="font-weight:bold; font-size:0.9rem;" id="inputModalTitle">スコア入力</span>
+          <div id="currentModeLabel" style="font-size:0.75rem; color:#1e40af; font-weight:bold; margin-top:1px;">現在のモード: 持ち点入力</div>
+        </div>
+        <button class="btn btn-sm btn-secondary" id="modeSwitchBtn" onclick="toggleInputMode()">Pt入力に切り替え</button>
+        <span onclick="closeModal('inputModal')" style="cursor:pointer; font-weight:bold; font-size:1rem; padding:0 4px;">✕</span>
+      </div>
+      
+      <div id="modalDisplay" style="font-size:1.3rem; text-align:right; padding:6px 10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:5px; font-weight:bold; min-height:42px;">0</div>
+
+      <div class="keypad">
+        <div class="key" onclick="pressKey('7')">7</div>
+        <div class="key" onclick="pressKey('8')">8</div>
+        <div class="key" onclick="pressKey('9')">9</div>
+        <div class="key" onclick="pressKey('4')">4</div>
+        <div class="key" onclick="pressKey('5')">5</div>
+        <div class="key" onclick="pressKey('6')">6</div>
+        <div class="key" onclick="pressKey('1')">1</div>
+        <div class="key" onclick="pressKey('2')">2</div>
+        <div class="key" onclick="pressKey('3')">3</div>
+        <div class="key" id="key-sign" onclick="toggleSign()">＋/ー</div>
+        <div class="key" onclick="pressKey('0')">0</div>
+        <div class="key" id="key-dot" onclick="pressKey('.')">.</div>
+        <div class="key" id="key-00" onclick="pressKey('00')">00</div>
+        <div class="key" style="background:#fee2e2; color:#991b1b;" onclick="clearAllInput()">C (全消去)</div>
+        <div class="key" onclick="pressKey('BS')">⌫</div>
+        <div class="key" style="grid-column: span 3; background:#e2e8f0; color:#991b1b; padding:6px; font-size:0.8rem;" onclick="clearScore()">この半荘を抜け番にする</div>
+        <div class="key submit" onclick="saveScore()">決定</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 画像トリミング用モーダル -->
+  <div class="full-modal" id="cropModal">
+    <div style="color:white; font-size:0.85rem; font-weight:bold; margin-bottom:8px;">ドラッグ・ピンチ操作で枠位置を調整</div>
+    <div style="max-width: 85vw; max-height: 60vh; width: 300px; height: 300px;">
+      <img id="cropImageTarget" style="max-width: 100%; display: block;">
+    </div>
+    <div style="display:flex; gap:10px; margin-top:16px;">
+      <button class="btn btn-secondary btn-sm" onclick="closeCropModal()">キャンセル</button>
+      <button class="btn btn-sm" style="background:#2563eb; padding: 6px 16px;" onclick="cropAndUpload()">決定して保存</button>
+    </div>
+  </div>
+
+  <!-- アバター拡大表示モーダル -->
+  <div class="full-modal" id="imageViewerModal" onclick="closeImageViewer()">
+    <div style="position:relative; text-align:center;" onclick="event.stopPropagation()">
+      <div id="imageViewerContent"></div>
+      <div id="imageViewerName" style="color:white; margin-top:10px; font-weight:bold; font-size:1rem;"></div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:12px;" onclick="closeImageViewer()">閉じる</button>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://uzjekcubhvdnylopthum.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_xE53L3w4lMQL7SlG8Fey4Q_xEIjThP4'; // ★ご自身のPublishable Keyを貼り付けてください
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const UMA = [30, 10, -10, -30];
+    let allMembers = [];
+    let sessions = [];
+    let allGames = [];
+    let scoresMap = {};
+    let currentSessionId = null;
+    let currentSessionMembers = [];
+    let activeCell = { gameId: null, memberId: null };
+    let currentTargetMemberIdForAvatar = null;
+    let cropper = null;
+    
+    let inputMode = 'raw';
+    let inputVal = "";
+    let isNegative = false;
+    let activeTabName = 'main';
+    let trendChart = null;
+
+    const AVATAR_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+
+    function getAvatarBgColor(name) {
+      let hash = 0;
+      for (let i = 0; i < (name || '').length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+    }
+
+    function renderAvatarHtml(member, sizeClass = '', isClickable = false) {
+      if (!member) return '';
+      const name = member.name || '不明';
+      const initial = name.charAt(0);
+      const clickableClass = isClickable ? 'avatar-clickable' : '';
+      const clickAttr = isClickable ? `onclick="openImageViewer('${member.id}')"` : '';
+
+      if (member.avatar_url) {
+        return `<img src="${member.avatar_url}" class="avatar ${sizeClass} ${clickableClass}" ${clickAttr} alt="${name}">`;
+      } else {
+        const bg = getAvatarBgColor(name);
+        return `<div class="avatar ${sizeClass} ${clickableClass}" ${clickAttr} style="background-color:${bg};">${initial}</div>`;
+      }
+    }
+
+    function openImageViewer(memberId) {
+      const member = allMembers.find(m => m.id === memberId);
+      if (!member) return;
+
+      const container = document.getElementById('imageViewerContent');
+      const nameEl = document.getElementById('imageViewerName');
+      nameEl.innerText = member.name;
+
+      if (member.avatar_url) {
+        container.innerHTML = `<img src="${member.avatar_url}" style="max-width: 75vw; max-height: 55vh; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.5);">`;
+      } else {
+        const bg = getAvatarBgColor(member.name);
+        container.innerHTML = `<div style="width:140px; height:140px; border-radius:50%; background-color:${bg}; display:flex; justify-content:center; align-items:center; color:white; font-size:3.5rem; font-weight:bold; margin:0 auto; box-shadow: 0 8px 20px rgba(0,0,0,0.5);">${member.name.charAt(0)}</div>`;
+      }
+
+      document.getElementById('imageViewerModal').classList.add('active');
+    }
+
+    function closeImageViewer() {
+      document.getElementById('imageViewerModal').classList.remove('active');
+    }
+
+    async function init() {
+      await fetchAllData();
+      setupPeriodUI();
+      renderMain();
+      renderStats();
+    }
+
+    async function fetchAllData() {
+      const { data: mData } = await db.from('members').select('*').order('created_at');
+      allMembers = mData || [];
+
+      const { data: sData } = await db.from('sessions').select('*').order('play_date', { ascending: true });
+      sessions = sData || [];
+
+      const { data: gData } = await db.from('games').select('*');
+      allGames = gData || [];
+
+      const { data: scData } = await db.from('scores').select('*');
+      scoresMap = {};
+      (scData || []).forEach(sc => scoresMap[`${sc.game_id}_${sc.member_id}`] = sc.raw_score);
+
+      if (!currentSessionId && sessions.length > 0) {
+        currentSessionId = sessions[sessions.length - 1].id;
+      }
+    }
+
+    function setupPeriodUI() {
+      onPeriodTypeChange();
+    }
+
+    function onPeriodTypeChange() {
+      const type = document.getElementById('period-type-select').value;
+      const area = document.getElementById('filter-inputs-area');
+      area.innerHTML = '';
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = `${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      if (type === 'half') {
+        const currMonthNum = now.getMonth() + 1;
+        const defaultHalf = currMonthNum <= 6 ? '1' : '2';
+        area.innerHTML = `
+          <input type="number" id="filter-half-year" class="period-input" style="width:58px;" value="${currentYear}" min="2000" max="2100" onchange="triggerFilterUpdate()"> 年
+          <select id="filter-half-val" class="period-select" onchange="triggerFilterUpdate()">
+            <option value="1" ${defaultHalf==='1'?'selected':''}>上半期 (1〜6月)</option>
+            <option value="2" ${defaultHalf==='2'?'selected':''}>下半期 (7〜12月)</option>
+          </select>`;
+      } else if (type === 'year') {
+        area.innerHTML = `<input type="number" id="filter-year" class="period-input" style="width:62px;" value="${currentYear}" min="2000" max="2100" onchange="triggerFilterUpdate()"> 年`;
+      } else if (type === 'month') {
+        area.innerHTML = `<input type="month" id="filter-month" class="period-input" value="${currentMonth}" onchange="triggerFilterUpdate()">`;
+      } else if (type === 'range') {
+        area.innerHTML = `
+          <input type="month" id="filter-start-month" class="period-input" value="${currentMonth}" onchange="triggerFilterUpdate()">
+          <span style="font-size:0.7rem;">〜</span>
+          <input type="month" id="filter-end-month" class="period-input" value="${currentMonth}" onchange="triggerFilterUpdate()">`;
+      }
+      triggerFilterUpdate();
+    }
+
+    function triggerFilterUpdate() {
+      renderMain();
+      renderStats();
+    }
+
+    function isDateInPeriod(dateStr) {
+      if (!dateStr) return false;
+      const type = document.getElementById('period-type-select').value;
+      const yyyy = dateStr.slice(0, 4);
+      const mm = parseInt(dateStr.slice(5, 7), 10);
+      const yyyymm = dateStr.slice(0, 7);
+
+      if (type === 'all') {
+        return true;
+      } else if (type === 'half') {
+        const inputYear = document.getElementById('filter-half-year')?.value;
+        const halfVal = document.getElementById('filter-half-val')?.value;
+        if (inputYear && yyyy !== String(inputYear)) return false;
+        if (halfVal === '1') return mm >= 1 && mm <= 6;
+        if (halfVal === '2') return mm >= 7 && mm <= 12;
+        return true;
+      } else if (type === 'year') {
+        const inputYear = document.getElementById('filter-year')?.value;
+        return inputYear ? yyyy === String(inputYear) : true;
+      } else if (type === 'month') {
+        const inputMonth = document.getElementById('filter-month')?.value;
+        return inputMonth ? yyyymm === inputMonth : true;
+      } else if (type === 'range') {
+        const startMonth = document.getElementById('filter-start-month')?.value;
+        const endMonth = document.getElementById('filter-end-month')?.value;
+        if (startMonth && yyyymm < startMonth) return false;
+        if (endMonth && yyyymm > endMonth) return false;
+        return true;
+      }
+      return true;
+    }
+
+    function calculateGameResult(activeMembers) {
+      if (activeMembers.length !== 4) {
+        return activeMembers.map(m => ({ idx: m.idx, raw: m.raw, rawPt: 0, rankPt: 0, totalPt: 0 }));
+      }
+      let sorted = [...activeMembers].sort((a, b) => b.raw - a.raw);
+      let results = [];
+      let i = 0;
+      while (i < sorted.length) {
+        let sameScoreGroup = [sorted[i]];
+        let j = i + 1;
+        while (j < sorted.length && sorted[j].raw === sorted[i].raw) {
+          sameScoreGroup.push(sorted[j]);
+          j++;
+        }
+        let sumUma = 0;
+        for (let r = i; r < j; r++) sumUma += UMA[r];
+        let avgRankPt = sumUma / sameScoreGroup.length;
+
+        sameScoreGroup.forEach(m => {
+          let rawPt = (m.raw - 25000) / 1000;
+          results.push({
+            idx: m.idx,
+            raw: m.raw,
+            rawPt: rawPt,
+            rankPt: avgRankPt,
+            totalPt: rawPt + avgRankPt
+          });
+        });
+        i = j;
+      }
+      return results;
+    }
+
+    function calculateSD(arr, mean) {
+      if (!arr || arr.length === 0) return 0;
+      const variance = arr.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / arr.length;
+      return Math.sqrt(variance);
+    }
+
+    function switchTab(tabName) {
+      activeTabName = tabName;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+      document.getElementById('tab-' + tabName).classList.add('active');
+      const hTitle = document.getElementById('header-title');
+      const hBtn = document.getElementById('header-action-btn');
+
+      if (tabName === 'main') {
+        hTitle.innerText = '対局履歴';
+        hBtn.style.display = 'block';
+        document.querySelectorAll('.nav-item')[0].classList.add('active');
+        renderMain();
+      } else if (tabName === 'detail') {
+        hTitle.innerText = '対局詳細・入力';
+        hBtn.style.display = 'none';
+        loadDetailSession(currentSessionId);
+      } else if (tabName === 'stats') {
+        hTitle.innerText = '戦績・統計';
+        hBtn.style.display = 'none';
+        document.querySelectorAll('.nav-item')[1].classList.add('active');
+        renderStats();
+      }
+    }
+
+    async function renderMain() {
+      await fetchAllData();
+
+      const filteredSessions = sessions.filter(s => isDateInPeriod(s.play_date)).reverse();
+      const filteredSessionIds = new Set(filteredSessions.map(s => s.id));
+
+      let memberTotals = {};
+      allMembers.forEach(m => memberTotals[m.id] = 0);
+
+      let sessionMemberTotals = {};
+
+      allGames.forEach(g => {
+        if (!filteredSessionIds.has(g.session_id)) return;
+
+        let gameScores = allMembers.map(m => scoresMap[`${g.id}_${m.id}`]);
+        let active = [];
+        gameScores.forEach((s, idx) => {
+          if (s !== undefined && s !== null) active.push({ id: allMembers[idx].id, idx, raw: Number(s) });
+        });
+
+        if (active.length === 4) {
+          let calcRes = calculateGameResult(active);
+          if (!sessionMemberTotals[g.session_id]) sessionMemberTotals[g.session_id] = {};
+
+          calcRes.forEach(r => {
+            const mId = active.find(a => a.idx === r.idx).id;
+            memberTotals[mId] += r.totalPt;
+            sessionMemberTotals[g.session_id][mId] = (sessionMemberTotals[g.session_id][mId] || 0) + r.totalPt;
+          });
+        }
+      });
+
+      // --- 期間内サマリーを点数の高い順（降順）にソート ---
+      const sortedMembers = [...allMembers].sort((a, b) => {
+        const scoreA = memberTotals[a.id] || 0;
+        const scoreB = memberTotals[b.id] || 0;
+        return scoreB - scoreA;
+      });
+
+      const sScroll = document.getElementById('main-summary-scroll');
+      sScroll.innerHTML = '';
+      sortedMembers.forEach(m => {
+        const pt = memberTotals[m.id] || 0;
+        const ptClass = pt >= 0 ? 'pt-plus' : 'pt-minus';
+        const ptSign = pt >= 0 ? '+' : '';
+        sScroll.innerHTML += `
+          <div class="summary-item">
+            ${renderAvatarHtml(m)}
+            <div class="summary-name">${m.name}</div>
+            <div class="summary-score ${ptClass}">${ptSign}${pt.toFixed(1)}</div>
+          </div>`;
+      });
+
+      const cList = document.getElementById('session-card-list');
+      cList.innerHTML = '';
+      if (filteredSessions.length === 0) {
+        cList.innerHTML = '<p style="font-size:0.8rem; color:#64748b; padding:8px 0;">選択した期間の対局データがありません。</p>';
+        return;
+      }
+
+      filteredSessions.forEach(s => {
+        const sTotals = sessionMemberTotals[s.id] || {};
+        let scoreHtml = '';
+
+        const joinedMemberIds = Object.keys(sTotals);
+        if (joinedMemberIds.length > 0) {
+          // --- 対局一覧のカード内メンバーも点数の高い順（降順）にソート ---
+          joinedMemberIds.sort((a, b) => (sTotals[b] || 0) - (sTotals[a] || 0));
+
+          scoreHtml = '<div class="session-scores-list">';
+          joinedMemberIds.forEach(mId => {
+            const memberObj = allMembers.find(m => m.id === mId);
+            const mName = memberObj?.name || '不明';
+            const pt = sTotals[mId];
+            const ptClass = pt >= 0 ? 'pt-plus' : 'pt-minus';
+            const ptSign = pt >= 0 ? '+' : '';
+            scoreHtml += `
+              <div class="session-score-item">
+                ${renderAvatarHtml(memberObj, 'avatar-sm')}
+                <span>${mName}: </span>
+                <span class="${ptClass}">${ptSign}${pt.toFixed(1)}P</span>
+              </div>`;
+          });
+          scoreHtml += '</div>';
+        } else {
+          scoreHtml = '<div style="font-size:0.7rem; color:#94a3b8; margin-top:2px;">対局データ未入力</div>';
+        }
+
+        cList.innerHTML += `
+          <div class="card" style="cursor:pointer;" onclick="openSessionDetail('${s.id}')">
+            <div class="card-header">
+              <span class="card-title">${s.play_date} の対局 (${s.title || '4麻セット'})</span>
+              <button class="btn btn-sm btn-danger" onclick="deleteSession(event, '${s.id}', '${s.play_date}')">削除</button>
+            </div>
+            ${scoreHtml}
+            <div style="text-align:right; font-size:0.7rem; font-weight:bold; color:var(--header-bg); margin-top:4px;">詳細・点数入力 ＞</div>
+          </div>`;
+      });
+    }
+
+    async function deleteSession(event, sId, playDate) {
+      event.stopPropagation();
+      if (!confirm(`${playDate} の対局データを削除してもよろしいですか？\n※この対局に含まれる半荘スコアも全て削除されます。`)) {
+        return;
+      }
+
+      const { data: targetGames } = await db.from('games').select('id').eq('session_id', sId);
+      if (targetGames && targetGames.length > 0) {
+        const gameIds = targetGames.map(g => g.id);
+        await db.from('scores').delete().in('game_id', gameIds);
+        await db.from('games').delete().eq('session_id', sId);
+      }
+      await db.from('sessions').delete().eq('id', sId);
+
+      await fetchAllData();
+      renderMain();
+      renderStats();
+    }
+
+    async function createNewSession() {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const dateStr = prompt("対局日を入力してください (YYYY-MM-DD):", todayStr);
+      if (!dateStr) return;
+
+      const title = prompt("対局タイトル（任意）:", "4麻セット");
+      if (title === null) return;
+
+      const { data, error } = await db.from('sessions').insert([{ play_date: dateStr, title }]).select();
+      
+      if (error) {
+        alert("保存に失敗しました。日付の形式（YYYY-MM-DD）を確認してください。");
+        return;
+      }
+
+      if (data && data.length > 0) {
+        currentSessionId = data[0].id;
+        currentSessionMembers = []; 
+        switchTab('detail');
+      }
+    }
+
+    function openSessionDetail(sId) {
+      currentSessionId = sId;
+      currentSessionMembers = [];
+      switchTab('detail');
+    }
+
+    async function loadDetailSession(sId) {
+      if (!sId) return;
+
+      const { data: sData } = await db.from('sessions').select('*').eq('id', sId).single();
+      if (sData) {
+        document.getElementById('detail-session-title').innerText = `${sData.play_date} の対局`;
+      }
+
+      const { data: gData } = await db.from('games').select('*').eq('session_id', sId).order('game_number');
+      let games = gData || [];
+
+      if (!currentSessionMembers || currentSessionMembers.length === 0) {
+        let participantIds = new Set();
+        games.forEach(g => {
+          allMembers.forEach(m => {
+            if (scoresMap[`${g.id}_${m.id}`] !== undefined) participantIds.add(m.id);
+          });
+        });
+
+        if (participantIds.size === 0) {
+          allMembers.slice(0, 4).forEach(m => participantIds.add(m.id));
+        }
+        currentSessionMembers = allMembers.filter(m => participantIds.has(m.id));
+      }
+
+      renderDetailTable(games);
+    }
+
+    function renderDetailTable(games) {
+      const hRow = document.getElementById('detail-header-row');
+      hRow.innerHTML = '<th style="width: 38px; min-width: 38px;">半荘</th>';
+      currentSessionMembers.forEach(m => {
+        hRow.innerHTML += `
+          <th>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:1px;">
+              ${renderAvatarHtml(m, 'avatar-sm')}
+              <span>${m.name}</span>
+            </div>
+          </th>`;
+      });
+
+      const sBody = document.getElementById('detail-score-body');
+      sBody.innerHTML = '';
+      let totals = new Array(currentSessionMembers.length).fill(0);
+
+      games.forEach((g) => {
+        let gameScores = currentSessionMembers.map(m => scoresMap[`${g.id}_${m.id}`]);
+        let activeMembers = [];
+        let totalRawScore = 0;
+
+        gameScores.forEach((s, idx) => {
+          if (s !== undefined && s !== null) {
+            activeMembers.push({ idx, raw: Number(s) });
+            totalRawScore += Number(s);
+          }
+        });
+
+        const isFourPlayers = activeMembers.length === 4;
+        const isSum100k = isFourPlayers && totalRawScore === 100000;
+        const alertMark = isFourPlayers && !isSum100k ? '<span style="color:#991b1b;" title="合計が10万点ではありません">⚠️</span>' : '';
+
+        let calcResult = calculateGameResult(activeMembers);
+        let resMap = {};
+        calcResult.forEach(r => resMap[r.idx] = r);
+
+        let tr = `<tr><td style="font-weight:bold; background:#edf2f7;">${g.game_number} ${alertMark}</td>`;
+        currentSessionMembers.forEach((m, mIdx) => {
+          const res = resMap[mIdx];
+          if (res && res.raw !== null) {
+            totals[mIdx] += res.totalPt;
+            const ptClass = res.rawPt >= 0 ? 'pt-plus' : 'pt-minus';
+            const ptSign = res.rawPt >= 0 ? '+' : '';
+            const rankSign = res.rankPt >= 0 ? `+${res.rankPt.toFixed(1)}` : `${res.rankPt.toFixed(1)}`;
+
+            tr += `
+              <td class="score-cell" onclick="openInputModal('${g.id}', '${m.id}')">
+                <div class="${ptClass}" style="font-size:0.75rem;">${ptSign}${res.rawPt.toFixed(1)} P</div>
+                <div style="font-size:0.6rem; color:#4a5568;">(${rankSign} P)</div>
+                <div style="font-size:0.6rem; color:#64748b;">${res.raw.toLocaleString()}点</div>
+              </td>`;
+          } else {
+            tr += `<td class="score-cell" onclick="openInputModal('${g.id}', '${m.id}')" style="color:#94a3b8;">ー</td>`;
+          }
+        });
+        tr += '</tr>';
+        sBody.innerHTML += tr;
+      });
+
+      const tRow = document.getElementById('detail-total-row');
+      tRow.innerHTML = '<td>計</td>';
+      currentSessionMembers.forEach((_, mIdx) => {
+        const pt = totals[mIdx];
+        const ptClass = pt >= 0 ? 'pt-plus' : 'pt-minus';
+        const ptSign = pt >= 0 ? '+' : '';
+        tRow.innerHTML += `<td class="${ptClass}">${ptSign}${pt.toFixed(1)}P</td>`;
+      });
+    }
+
+    async function addNewGame() {
+      if (!currentSessionId) return alert("対局セットが選択されていません");
+      const { data: gData } = await db.from('games').select('*').eq('session_id', currentSessionId);
+      const nextNum = (gData || []).length + 1;
+      await db.from('games').insert([{ session_id: currentSessionId, game_number: nextNum }]);
+      await fetchAllData();
+      loadDetailSession(currentSessionId);
+    }
+
+    function openSettingsModal() { document.getElementById('settingsModal').classList.add('active'); }
+    function openMasterMemberModal() { renderMasterMemberList(); document.getElementById('masterMemberModal').classList.add('active'); }
+    
+    function renderMasterMemberList() {
+      const list = document.getElementById('masterMemberList');
+      list.innerHTML = '';
+      allMembers.forEach(m => {
+        list.innerHTML += `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              ${renderAvatarHtml(m, '', true)}
+              <span style="font-weight:bold; cursor:pointer;" onclick="openImageViewer('${m.id}')">${m.name}</span>
+            </div>
+            <div style="display:flex; gap:3px; align-items:center;">
+              <button class="btn btn-sm btn-secondary" onclick="triggerAvatarUpload('${m.id}')">画像変更</button>
+              ${m.avatar_url ? `<button class="btn btn-sm btn-secondary" style="padding:2px 4px;" onclick="removeAvatar('${m.id}')" title="画像削除">✕</button>` : ''}
+              <button class="btn btn-sm btn-secondary" onclick="editMasterMember('${m.id}', '${m.name}')">編集</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteMasterMember('${m.id}')">削除</button>
+            </div>
+          </div>`;
+      });
+    }
+
+    function triggerAvatarUpload(memberId) {
+      currentTargetMemberIdForAvatar = memberId;
+      document.getElementById('avatarFileInput').click();
+    }
+
+    function handleAvatarSelected(event) {
+      const file = event.target.files[0];
+      if (!file || !currentTargetMemberIdForAvatar) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const cropImg = document.getElementById('cropImageTarget');
+        cropImg.src = e.target.result;
+
+        document.getElementById('cropModal').classList.add('active');
+
+        if (cropper) cropper.destroy();
+
+        cropper = new Cropper(cropImg, {
+          aspectRatio: 1,
+          viewMode: 1,
+          dragMode: 'move',
+          autoCropArea: 0.8,
+          restore: false,
+          guides: false,
+          center: true,
+          highlight: false,
+          cropBoxMovable: true,
+          cropBoxResizable: true,
+          toggleDragModeOnDblclick: false,
+        });
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+    }
+
+    function closeCropModal() {
+      document.getElementById('cropModal').classList.remove('active');
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+    }
+
+    async function cropAndUpload() {
+      if (!cropper || !currentTargetMemberIdForAvatar) return;
+
+      try {
+        const canvas = cropper.getCroppedCanvas({
+          width: 512,
+          height: 512,
+          imageSmoothingEnabled: true,
+          imageSmoothingQuality: 'high',
+        });
+
+        canvas.toBlob(async (blob) => {
+          if (!blob) return alert('画像の生成に失敗しました');
+
+          const fileName = `avatar_${currentTargetMemberIdForAvatar}_${Date.now()}.jpg`;
+
+          const { data, error } = await db.storage.from('avatars').upload(fileName, blob, {
+            contentType: 'image/jpeg',
+            upsert: true
+          });
+
+          if (error) throw error;
+
+          const { data: publicUrlData } = db.storage.from('avatars').getPublicUrl(fileName);
+          const avatarUrl = publicUrlData.publicUrl;
+
+          await db.from('members').update({ avatar_url: avatarUrl }).eq('id', currentTargetMemberIdForAvatar);
+
+          closeCropModal();
+          await fetchAllData();
+          renderMasterMemberList();
+          renderMain();
+          if (activeTabName === 'detail') loadDetailSession(currentSessionId);
+
+        }, 'image/jpeg', 0.8);
+
+      } catch (err) {
+        console.error(err);
+        alert('画像のアップロードに失敗しました。');
+      }
+    }
+
+    async function removeAvatar(memberId) {
+      if (!confirm('アバター画像を削除してデフォルトに戻しますか？')) return;
+      await db.from('members').update({ avatar_url: null }).eq('id', memberId);
+      await fetchAllData();
+      renderMasterMemberList();
+      renderMain();
+      if (activeTabName === 'detail') loadDetailSession(currentSessionId);
+    }
+
+    async function addMasterMember() {
+      const name = document.getElementById('newMasterName').value.trim();
+      if (!name) return;
+      await db.from('members').insert([{ name }]);
+      document.getElementById('newMasterName').value = '';
+      await fetchAllData();
+      renderMasterMemberList();
+    }
+
+    async function editMasterMember(mId, currentName) {
+      const newName = prompt("新しいメンバー名を入力してください:", currentName);
+      if (newName === null) return;
+      const trimmed = newName.trim();
+      if (!trimmed || trimmed === currentName) return;
+
+      await db.from('members').update({ name: trimmed }).eq('id', mId);
+      await fetchAllData();
+      renderMasterMemberList();
+      renderMain();
+      if (activeTabName === 'detail') loadDetailSession(currentSessionId);
+    }
+
+    async function deleteMasterMember(mId) {
+      if (!confirm("このメンバーをマスターから削除しますか？")) return;
+      await db.from('members').delete().eq('id', mId);
+      await fetchAllData();
+      renderMasterMemberList();
+      renderMain();
+    }
+
+    function openAddSessionMemberModal() {
+      renderSessionMemberList();
+      document.getElementById('addSessionMemberModal').classList.add('active');
+    }
+
+    function renderSessionMemberList() {
+      const list = document.getElementById('sessionMemberSelectList');
+      list.innerHTML = '';
+      allMembers.forEach(m => {
+        const isJoined = currentSessionMembers.some(sm => sm.id === m.id);
+        list.innerHTML += `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              ${renderAvatarHtml(m, 'avatar-sm')}
+              <span>${m.name}</span>
+            </div>
+            <button class="btn btn-sm ${isJoined ? 'btn-secondary' : ''}" onclick="toggleSessionMember('${m.id}')">
+              ${isJoined ? '参加中 (解除)' : '＋ 追加'}
+            </button>
+          </div>`;
+      });
+    }
+
+    function toggleSessionMember(mId) {
+      const target = allMembers.find(m => m.id === mId);
+      const exists = currentSessionMembers.some(m => m.id === mId);
+      
+      if (exists) {
+        const sessionGameIds = allGames.filter(g => g.session_id === currentSessionId).map(g => g.id);
+        const hasHistory = sessionGameIds.some(gId => scoresMap[`${gId}_${mId}`] !== undefined && scoresMap[`${gId}_${mId}`] !== null);
+
+        if (hasHistory) {
+          const warn = confirm(`⚠️ 警告:\n${target.name} さんの対局履歴がこのセット内に残っています！\n\nメンバーから外すとデータが不整合になり、他のメンバーの結果も狂う可能性があります。\n\n本当に外しますか？`);
+          if (!warn) return;
+        }
+
+        currentSessionMembers = currentSessionMembers.filter(m => m.id !== mId);
+      } else {
+        currentSessionMembers.push(target);
+      }
+      renderSessionMemberList();
+      loadDetailSession(currentSessionId);
+    }
+
+    function openInputModal(gId, mId) {
+      activeCell = { gameId: gId, memberId: mId };
+      inputMode = 'raw';
+      
+      const val = scoresMap[`${gId}_${mId}`];
+      if (val !== undefined && val !== null) {
+        inputVal = String(Math.abs(val));
+        isNegative = val < 0;
+      } else {
+        inputVal = "";
+        isNegative = false;
+      }
+
+      updateInputModalUI();
+      document.getElementById('inputModal').classList.add('active');
+    }
+
+    function toggleInputMode() {
+      inputMode = inputMode === 'raw' ? 'pt' : 'raw';
+      inputVal = "";
+      isNegative = false;
+      updateInputModalUI();
+    }
+
+    function updateInputModalUI() {
+      const btn = document.getElementById('modeSwitchBtn');
+      const label = document.getElementById('currentModeLabel');
+      const keySign = document.getElementById('key-sign');
+      const keyDot = document.getElementById('key-dot');
+      const key00 = document.getElementById('key-00');
+
+      if (inputMode === 'raw') {
+        label.innerText = "現在のモード: 持ち点入力";
+        label.style.color = "#1e40af";
+        btn.innerText = "Pt入力に切り替え";
+        
+        keySign.classList.remove('disabled');
+        keyDot.classList.add('disabled');
+        key00.classList.remove('disabled');
+      } else {
+        label.innerText = "現在のモード: Pt入力";
+        label.style.color = "#047857";
+        btn.innerText = "持ち点入力に切り替え";
+        
+        keySign.classList.remove('disabled');
+        keyDot.classList.remove('disabled');
+        key00.classList.add('disabled');
+      }
+
+      updateDisplay();
+    }
+
+    function toggleSign() {
+      isNegative = !isNegative;
+      updateDisplay();
+    }
+
+    function pressKey(k) {
+      if (k === 'BS') {
+        inputVal = inputVal.slice(0, -1);
+      } else {
+        if (inputMode === 'raw') {
+          if (k === '.') return;
+          if (inputVal.length < 6) inputVal += k;
+        } else {
+          if (k === '00') return;
+          if (k === '.' && inputVal.includes('.')) return;
+          if (inputVal.length < 5) inputVal += k;
+        }
+      }
+      updateDisplay();
+    }
+
+    function clearAllInput() {
+      inputVal = "";
+      isNegative = false;
+      updateDisplay();
+    }
+
+    function updateDisplay() {
+      const display = document.getElementById('modalDisplay');
+      if (!inputVal) {
+        display.innerText = "（未入力）";
+        display.style.color = "#94a3b8";
+        return;
+      }
+
+      display.style.color = "var(--text-main)";
+      const signStr = isNegative ? "-" : "";
+
+      if (inputMode === 'raw') {
+        const num = Number(inputVal);
+        display.innerText = `${signStr}${num.toLocaleString()} 点`;
+      } else {
+        const ptSignStr = isNegative ? "-" : "+";
+        display.innerText = `${ptSignStr}${inputVal} Pt`;
+      }
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    async function clearScore() {
+      await db.from('scores').delete().eq('game_id', activeCell.gameId).eq('member_id', activeCell.memberId);
+      closeModal('inputModal');
+      await fetchAllData();
+      loadDetailSession(currentSessionId);
+    }
+    
+    async function saveScore() {
+      if (!inputVal) return clearScore();
+
+      let targetRawScore = 0;
+      if (inputMode === 'raw') {
+        targetRawScore = Number(inputVal) * (isNegative ? -1 : 1);
+      } else {
+        let ptNum = Number(inputVal) * (isNegative ? -1 : 1);
+        targetRawScore = Math.round(ptNum * 1000 + 25000);
+      }
+
+      const tempScoresMap = { ...scoresMap, [`${activeCell.gameId}_${activeCell.memberId}`]: targetRawScore };
+      let activeScores = currentSessionMembers
+        .map(m => tempScoresMap[`${activeCell.gameId}_${m.id}`])
+        .filter(s => s !== undefined && s !== null);
+
+      if (activeScores.length === 4) {
+        let sum = activeScores.reduce((acc, val) => acc + Number(val), 0);
+        if (sum !== 100000) {
+          alert(`⚠️ 注意: この半荘の合計点が ${sum.toLocaleString()}点 です（100,000点になっていません）。`);
+        }
+      }
+
+      await db.from('scores').upsert([{ game_id: activeCell.gameId, member_id: activeCell.memberId, raw_score: targetRawScore }], { onConflict: 'game_id,member_id' });
+      closeModal('inputModal');
+      await fetchAllData();
+      loadDetailSession(currentSessionId);
+    }
+
+    async function renderStats() {
+      await fetchAllData();
+
+      let memberStats = {};
+      allMembers.forEach(m => {
+        memberStats[m.id] = { 
+          id: m.id,
+          name: m.name, 
+          avatar_url: m.avatar_url,
+          totalPt: 0, 
+          gamesCount: 0, 
+          ranks: [0,0,0,0], 
+          vs: {}, 
+          rawList: [],     
+          topRawList: [],  
+          dailyTrend: {}      
+        };
+      });
+
+      const sessionDateMap = {};
+      const filteredSessions = sessions.filter(s => isDateInPeriod(s.play_date));
+      filteredSessions.forEach(s => sessionDateMap[s.id] = s.play_date);
+
+      let dailyMemberPt = {};
+      filteredSessions.forEach(s => { dailyMemberPt[s.play_date] = {}; });
+
+      allGames.forEach(g => {
+        const pDate = sessionDateMap[g.session_id];
+        if (!pDate) return;
+
+        let gameScores = allMembers.map(m => scoresMap[`${g.id}_${m.id}`]);
+        let active = [];
+        gameScores.forEach((s, idx) => {
+          if (s !== undefined && s !== null) active.push({ id: allMembers[idx].id, idx, raw: Number(s) });
+        });
+
+        if (active.length === 4) {
+          let calcRes = calculateGameResult(active);
+          calcRes.forEach(r => {
+            const mId = active.find(a => a.idx === r.idx).id;
+            const mRawScore = active.find(a => a.idx === r.idx).raw; 
+
+            let st = memberStats[mId];
+            st.totalPt += r.totalPt;
+            st.gamesCount += 1;
+            st.rawList.push(mRawScore);
+
+            if (!dailyMemberPt[pDate][mId]) dailyMemberPt[pDate][mId] = 0;
+            dailyMemberPt[pDate][mId] += r.totalPt;
+
+            if (r.rankPt > 15) {
+              st.ranks[0] += 1;
+              st.topRawList.push(mRawScore);
+            } else if (r.rankPt > 0) st.ranks[1] += 1;
+            else if (r.rankPt > -20) st.ranks[2] += 1;
+            else st.ranks[3] += 1;
+
+            calcRes.forEach(oppRes => {
+              const oppId = active.find(a => a.idx === oppRes.idx).id;
+              const oppRawScore = active.find(a => a.idx === oppRes.idx).raw; 
+              if (mId !== oppId) {
+                if (!st.vs[oppId]) st.vs[oppId] = { diffRaw: 0, count: 0 };
+                st.vs[oppId].diffRaw += (mRawScore - oppRawScore); 
+                st.vs[oppId].count += 1;
+              }
+            });
+          });
+        }
+      });
+
+      const activeDates = filteredSessions.map(s => s.play_date);
+      allMembers.forEach(m => {
+        let runningTotal = 0;
+        let hasPlayed = false;
+        activeDates.forEach(d => {
+          if (dailyMemberPt[d] && dailyMemberPt[d][m.id] !== undefined) {
+            runningTotal += dailyMemberPt[d][m.id];
+            hasPlayed = true;
+          }
+          if (hasPlayed) {
+            memberStats[m.id].dailyTrend[d] = runningTotal;
+          }
+        });
+      });
+
+      // 各計算指標をメンバーオブジェクトに付与
+      Object.values(memberStats).forEach(st => {
+        const gc = st.gamesCount;
+        if (gc > 0) {
+          const totalRanks = st.ranks[0]*1 + st.ranks[1]*2 + st.ranks[2]*3 + st.ranks[3]*4;
+          st.avgRank = totalRanks / gc;
+          st.topRate = (st.ranks[0] / gc) * 100;
+          st.rentaiRate = ((st.ranks[0] + st.ranks[1]) / gc) * 100;
+          st.avoidLastRate = ((gc - st.ranks[3]) / gc) * 100;
+          st.avgRaw = Math.round(st.rawList.reduce((a,b)=>a+b,0) / gc);
+          st.topAvgRaw = st.ranks[0] > 0 ? Math.round(st.topRawList.reduce((a,b)=>a+b,0) / st.ranks[0]) : 0;
+        } else {
+          st.avgRank = 99;
+          st.topRate = 0;
+          st.rentaiRate = 0;
+          st.avoidLastRate = 0;
+          st.avgRaw = 0;
+          st.topAvgRaw = 0;
+        }
+      });
+
+      const select = document.getElementById('stats-member-select');
+      const currentSelected = select.value;
+      select.innerHTML = '';
+      allMembers.forEach(m => {
+        select.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+      });
+      if (currentSelected && allMembers.some(m => m.id === currentSelected)) {
+        select.value = currentSelected;
+      }
+
+      window.cachedStats = memberStats;
+      window.cachedDates = activeDates;
+
+      renderStatsRankList();
+      renderStatsDetail();
+    }
+
+    /* 選択した項目に基づいてランキングリストを描画 */
+    function renderStatsRankList() {
+      if (!window.cachedStats) return;
+      const rankList = document.getElementById('stats-rank-list');
+      rankList.innerHTML = '';
+
+      const sortKey = document.getElementById('stats-sort-select').value;
+      let sorted = Object.values(window.cachedStats);
+
+      // ソート処理
+      sorted.sort((a, b) => {
+        if (a.gamesCount === 0 && b.gamesCount === 0) return 0;
+        if (a.gamesCount === 0) return 1;
+        if (b.gamesCount === 0) return -1;
+
+        if (sortKey === 'avgRank') {
+          return a.avgRank - b.avgRank; // 平均順位のみ数字が小さい方が上位
+        } else {
+          return b[sortKey] - a[sortKey];
+        }
+      });
+
+      sorted.forEach((st, idx) => {
+        const memberObj = allMembers.find(m => m.id === st.id);
+        let displayValStr = '';
+
+        if (st.gamesCount === 0) {
+          displayValStr = '<span style="color:#94a3b8; font-size:0.75rem;">データなし</span>';
+        } else {
+          switch (sortKey) {
+            case 'totalPt':
+              const ptClass = st.totalPt >= 0 ? 'pt-plus' : 'pt-minus';
+              const ptSign = st.totalPt >= 0 ? '+' : '';
+              displayValStr = `<span class="${ptClass}" style="font-size:0.8rem;">${ptSign}${st.totalPt.toFixed(1)} P</span>`;
+              break;
+            case 'avgRank':
+              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.avgRank.toFixed(2)} 位</span>`;
+              break;
+            case 'topRate':
+              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.topRate.toFixed(1)} %</span>`;
+              break;
+            case 'rentaiRate':
+              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.rentaiRate.toFixed(1)} %</span>`;
+              break;
+            case 'avoidLastRate':
+              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.avoidLastRate.toFixed(1)} %</span>`;
+              break;
+            case 'avgRaw':
+              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.avgRaw.toLocaleString()} 点</span>`;
+              break;
+            case 'topAvgRaw':
+              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.ranks[0] > 0 ? st.topAvgRaw.toLocaleString() + ' 点' : '-'}</span>`;
+              break;
+          }
+        }
+
+        rankList.innerHTML += `
+          <div class="rank-item" onclick="selectMemberFromRank('${st.id}')">
+            <span class="rank-num">${idx + 1}</span>
+            <div class="rank-name">
+              ${renderAvatarHtml(memberObj, 'avatar-sm')}
+              <span>${st.name} <span style="font-size:0.7rem; font-weight:normal; color:#64748b;">(${st.gamesCount}局)</span></span>
+            </div>
+            ${displayValStr}
+          </div>`;
+      });
+    }
+
+    function selectMemberFromRank(mId) {
+      const select = document.getElementById('stats-member-select');
+      select.value = mId;
+      renderStatsDetail();
+      
+      const targetBox = document.getElementById('personal-stats-box');
+      if (targetBox) {
+        targetBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function renderStatsDetail() {
+      const mId = document.getElementById('stats-member-select').value;
+      if (!mId || !window.cachedStats) return;
+      const st = window.cachedStats[mId];
+
+      if (!st || st.gamesCount === 0) {
+        document.getElementById('stat-avg-rank').innerText = '- 位';
+        document.getElementById('stat-top-rate').innerText = '- %';
+        document.getElementById('stat-sub-ranks').innerText = '-';
+        document.getElementById('stat-rentai-rate').innerText = '- %';
+        document.getElementById('stat-avoid-last-rate').innerText = '- %';
+        document.getElementById('stat-avg-score').innerText = '-';
+        document.getElementById('stat-sd-score').innerText = 'SD: -';
+        document.getElementById('stat-top-avg-score').innerText = '-';
+        document.getElementById('stat-top-sd-score').innerText = 'SD: -';
+        document.getElementById('stats-vs-list').innerHTML = '選択期間内の対局データがありません';
+
+        if (trendChart) trendChart.destroy();
+        return;
+      }
+
+      const r2Rate = ((st.ranks[1] / st.gamesCount) * 100).toFixed(1);
+      const r3Rate = ((st.ranks[2] / st.gamesCount) * 100).toFixed(1);
+      const r4Rate = ((st.ranks[3] / st.gamesCount) * 100).toFixed(1);
+
+      const sdRaw = Math.round(calculateSD(st.rawList, st.avgRaw));
+
+      let topSdRaw = 0;
+      if (st.ranks[0] > 0) {
+        topSdRaw = Math.round(calculateSD(st.topRawList, st.topAvgRaw));
+      }
+
+      document.getElementById('stat-avg-rank').innerText = `${st.avgRank.toFixed(2)} 位`;
+      document.getElementById('stat-top-rate').innerText = `${st.topRate.toFixed(1)} %`;
+      document.getElementById('stat-sub-ranks').innerText = `2位:${r2Rate}% | 3位:${r3Rate}% | 4位:${r4Rate}%`;
+      document.getElementById('stat-rentai-rate').innerText = `${st.rentaiRate.toFixed(1)} %`;
+      document.getElementById('stat-avoid-last-rate').innerText = `${st.avoidLastRate.toFixed(1)} %`;
+
+      document.getElementById('stat-avg-score').innerText = `${st.avgRaw.toLocaleString()} 点`;
+      document.getElementById('stat-sd-score').innerText = `SD: ±${sdRaw.toLocaleString()}`;
+
+      document.getElementById('stat-top-avg-score').innerText = st.ranks[0] > 0 ? `${st.topAvgRaw.toLocaleString()} 点` : '-';
+      document.getElementById('stat-top-sd-score').innerText = st.ranks[0] > 0 ? `SD: ±${topSdRaw.toLocaleString()}` : 'SD: -';
+
+      /* 対人戦績：相手画像は入れずシンプルに「vs 名前」 */
+      const vsList = document.getElementById('stats-vs-list');
+      vsList.innerHTML = '';
+      const oppKeys = Object.keys(st.vs);
+      if (oppKeys.length === 0) {
+        vsList.innerHTML = '<span style="color:#64748b;">対戦データがありません</span>';
+      } else {
+        oppKeys.forEach(oppId => {
+          const oppMember = allMembers.find(m => m.id === oppId);
+          const oppName = oppMember?.name || '不明';
+          const v = st.vs[oppId];
+          const avgOppRawDiff = v.count > 0 ? Math.round(v.diffRaw / v.count) : 0;
+          const rawClass = v.diffRaw >= 0 ? 'pt-plus' : 'pt-minus';
+          const rawSign = v.diffRaw >= 0 ? '+' : '';
+          const avgSignStr = avgOppRawDiff >= 0 ? '+' : '';
+
+          vsList.innerHTML += `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; border-bottom:1px dashed #e2e8f0; padding-bottom:3px;">
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span style="font-weight:bold;">vs ${oppName}</span>
+                <span style="font-size:0.65rem; color:#64748b;">(${v.count}局)</span>
+              </div>
+              <div style="text-align:right;">
+                <div class="${rawClass}" style="font-size:0.78rem;">計 ${rawSign}${v.diffRaw.toLocaleString()} 点</div>
+                <div style="font-size:0.62rem; color:#64748b;">平均 ${avgSignStr}${avgOppRawDiff.toLocaleString()} 点/局</div>
+              </div>
+            </div>`;
+        });
+      }
+
+      renderTrendChart(st);
+    }
+
+    function renderTrendChart(st) {
+      const dates = window.cachedDates || [];
+      const chartData = dates.map(d => st.dailyTrend[d] !== undefined ? st.dailyTrend[d] : null);
+
+      const ctx = document.getElementById('scoreTrendChart').getContext('2d');
+
+      if (trendChart) {
+        trendChart.destroy();
+      }
+
+      trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: `${st.name} の累積点数 (Pt)`,
+            data: chartData,
+            borderColor: '#2d3b32',
+            backgroundColor: 'rgba(45, 59, 50, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.2,
+            pointRadius: 3,
+            pointBackgroundColor: '#2d3b32'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => ` 累積: ${context.parsed.y >= 0 ? '+' : ''}${context.parsed.y.toFixed(1)} P`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 8 }, maxRotation: 45, minRotation: 45 }
+            },
+            y: {
+              grid: { color: '#e2e8f0' },
+              ticks: { font: { size: 9 } }
+            }
+          }
+        }
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>
