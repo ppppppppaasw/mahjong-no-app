@@ -6,15 +6,19 @@
   <title>うんち管理</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
+
+  <!-- Android Chrome用 テーマカラー設定 -->
+  <meta name="theme-color" content="#2d3b32">
   <!-- PWA設定ファイル読み込み -->
   <link rel="manifest" href="manifest.json">
+  <!-- アイコンの設定 -->
+  <link rel="icon" type="image/png" href="./icon-192.png">
 
   <!-- iOS (Safari) 用の設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="うん簿">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   
   <!-- 画像トリミングライブラリ (Cropper.js) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
@@ -120,15 +124,15 @@
 
     /* ヘッダー右上のメンバー管理ボタン専用スタイル */
     .header-btn {
-      background: linear-gradient(135deg, #3b82f6, #1d4ed8); /* 鮮やかなブルーのグラデーション */
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
       color: #ffffff;
       border: none;
       padding: 6px 12px;
-      border-radius: 20px; /* 丸みを持たせてモダンなカプセル形状に */
+      border-radius: 20px;
       font-weight: bold;
       font-size: 0.78rem;
       cursor: pointer;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25); /* ボタンらしい立体感 */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
       display: inline-flex;
       align-items: center;
       gap: 4px;
@@ -137,7 +141,6 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* タップ・クリックしたときの押し込み感 */
     .header-btn:active {
       transform: scale(0.94);
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -196,14 +199,12 @@
 
   <div class="container">
 
-<!-- 1. メイン画面 -->
+    <!-- 1. メイン画面 -->
     <div id="tab-main" class="tab-content active">
-      <!-- 期間内サマリーの見出し（ボタンを外してスッキリ配置） -->
       <div style="font-size:0.82rem; font-weight:bold; margin-bottom:8px;">期間内サマリー</div>
 
       <div class="summary-scroll" id="main-summary-scroll"></div>
 
-      <!-- 対局セット一覧の見出し ＋ ボタンを横並びに配置 -->
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
         <span style="font-size:0.8rem; font-weight:bold; color:#4a5568;">対局一覧</span>
         <button class="btn btn-sm" onclick="createNewSession()">＋ 新しい対局日を作成</button>
@@ -360,6 +361,7 @@
         <div class="rule-title">基本ルール</div>
         <div class="rule-row"><span class="rule-label">配給原点 (持ち点):</span><span class="rule-val">25,000 点</span></div>
         <div class="rule-row"><span class="rule-label">集計基準点:</span><span class="rule-val">25,000 点</span></div>
+        <div class="rule-row"><span class="rule-label">ポイント計算式:</span><span class="rule-val">(最終持ち点 - 25,000) / 1,000</span></div>
         <div class="rule-row"><span class="rule-label">オカ:</span><span class="rule-val">なし</span></div>
         <div class="rule-row"><span class="rule-label">ゲーム種別:</span><span class="rule-val">4人打ち東南戦</span></div>
       </div>
@@ -370,6 +372,9 @@
         <div class="rule-row"><span class="rule-label">2位:</span><span class="rule-val pt-plus">+10.0 P</span></div>
         <div class="rule-row"><span class="rule-label">3位:</span><span class="rule-val pt-minus">-10.0 P</span></div>
         <div class="rule-row"><span class="rule-label">4位（ラス）:</span><span class="rule-val pt-minus">-30.0 P</span></div>
+        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #cbd5e1; font-size: 0.72rem; color: #64748b;">
+          ※同点の場合は、該当する順位の順位点を合計し等分（山分け）します。
+        </div>
       </div>
 
       <button class="btn btn-sm" style="width:100%; padding:8px; margin-top:4px;" onclick="closeModal('settingsModal')">閉じる</button>
@@ -459,7 +464,7 @@
 
   <script>
     const SUPABASE_URL = 'https://uzjekcubhvdnylopthum.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_xE53L3w4lMQL7SlG8Fey4Q_xEIjThP4'; // ★ご自身のPublishable Keyを貼り付けてください
+    const SUPABASE_KEY = 'sb_publishable_xE53L3w4lMQL7SlG8Fey4Q_xEIjThP4';
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const UMA = [30, 10, -10, -30];
@@ -532,7 +537,6 @@
       renderMain();
       renderStats();
 
-      // ★SupabaseのRealtime（自動更新）を有効化
       db.channel('schema-db-changes')
         .on(
           'postgres_changes',
@@ -594,7 +598,6 @@
       } else if (type === 'month') {
         area.innerHTML = `<input type="month" id="filter-month" class="period-input" value="${currentMonth}" onchange="triggerFilterUpdate()">`;
       } else if (type === 'range') {
-        // 日付指定（YYYY-MM-DD）のカレンダーピッカーに変更
         area.innerHTML = `
           <input type="date" id="filter-start-date" class="period-input" value="${currentYear}-01-01" onchange="triggerFilterUpdate()">
           <span style="font-size:0.7rem;">〜</span>
@@ -737,7 +740,6 @@
         }
       });
 
-      // --- 期間内サマリーを点数の高い順（降順）にソート ---
       const sortedMembers = [...allMembers].sort((a, b) => {
         const scoreA = memberTotals[a.id] || 0;
         const scoreB = memberTotals[b.id] || 0;
@@ -771,7 +773,6 @@
 
         const joinedMemberIds = Object.keys(sTotals);
         if (joinedMemberIds.length > 0) {
-          // --- 対局一覧のカード内メンバーも点数の高い順（降順）にソート ---
           joinedMemberIds.sort((a, b) => (sTotals[b] || 0) - (sTotals[a] || 0));
 
           scoreHtml = '<div class="session-scores-list">';
@@ -824,7 +825,6 @@
       renderStats();
     }
 
-    // モーダルを開いて初期値をセット
     function createNewSession() {
       const todayStr = new Date().toISOString().split('T')[0];
       document.getElementById('newSessionDate').value = todayStr;
@@ -832,7 +832,6 @@
       document.getElementById('createSessionModal').classList.add('active');
     }
 
-    // モーダルの「作成する」ボタンを押したときの処理
     async function submitNewSession() {
       const dateStr = document.getElementById('newSessionDate').value;
       const title = document.getElementById('newSessionTitle').value.trim() || "4麻セット";
@@ -851,7 +850,6 @@
 
       closeModal('createSessionModal');
 
-      // データを最新化してメイン画面を更新（メイン画面にとどまる）
       await fetchAllData();
       renderMain();
     }
@@ -927,7 +925,7 @@
         let resMap = {};
         calcResult.forEach(r => resMap[r.idx] = r);
 
-        let tr = `<tr><td style="font-weight:bold; background:#edf2f7;">${g.game_number} ${alertMark}</td>`;
+        let tr = `<tr><td style="font-weight:bold; background:#edf2f7; cursor:pointer;" onclick="confirmDeleteGame('${g.id}', ${g.game_number})" title="タップで削除">${g.game_number} ${alertMark}</td>`;
         currentSessionMembers.forEach((m, mIdx) => {
           const res = resMap[mIdx];
           if (res && res.raw !== null) {
@@ -968,6 +966,43 @@
       await fetchAllData();
       loadDetailSession(currentSessionId);
     }
+
+    async function confirmDeleteGame(gameId, gameNumber) {
+      if (!confirm(`${gameNumber} を削除してもよろしいですか？\n※入力されているスコアも削除されます。`)) {
+        return;
+      }
+
+      try {
+        // 1. 対象半荘のスコアと半荘データを削除
+        await db.from('scores').delete().eq('game_id', gameId);
+        await db.from('games').delete().eq('id', gameId);
+
+        // 2. 現在のセッションに残っている全半荘を取得して番号順にソート
+        const { data: remainingGames } = await db
+          .from('games')
+          .select('*')
+          .eq('session_id', currentSessionId)
+          .order('game_number', { ascending: true });
+
+        // 3. 1から順に game_number を振り直して更新
+        if (remainingGames && remainingGames.length > 0) {
+          const updates = remainingGames.map((g, idx) => ({
+            id: g.id,
+            session_id: g.session_id,
+            game_number: idx + 1
+          }));
+          await db.from('games').upsert(updates);
+        }
+
+        // 4. データ再取得と表示更新
+        await fetchAllData();
+        loadDetailSession(currentSessionId);
+      } catch (err) {
+        console.error('削除エラー:', err);
+        alert('削除処理に失敗しました。');
+      }
+    }
+
 
     function openSettingsModal() { document.getElementById('settingsModal').classList.add('active'); }
     function openMasterMemberModal() { renderMasterMemberList(); document.getElementById('masterMemberModal').classList.add('active'); }
@@ -1050,13 +1085,10 @@
         canvas.toBlob(async (blob) => {
           if (!blob) return alert('画像の生成に失敗しました');
 
-          // 1. 対象メンバーの現在の情報（旧アバターURL）を取得
           const member = allMembers.find(m => m.id === currentTargetMemberIdForAvatar);
-      
-          // 2. 旧画像が存在する場合は Supabase Storage から削除
+
           if (member && member.avatar_url) {
             try {
-              // URLからファイル名（パス）だけを取り出す
               const oldFileName = member.avatar_url.split('/').pop();
               if (oldFileName) {
                 await db.storage.from('avatars').remove([oldFileName]);
@@ -1066,7 +1098,6 @@
             }
           }
 
-          // 3. 新しいファイル名を生成してアップロード
           const fileName = `avatar_${currentTargetMemberIdForAvatar}_${Date.now()}.jpg`;
 
           const { data, error } = await db.storage.from('avatars').upload(fileName, blob, {
@@ -1076,7 +1107,6 @@
 
           if (error) throw error;
 
-          // 4. 新しい公開URLを取得して DB を更新
           const { data: publicUrlData } = db.storage.from('avatars').getPublicUrl(fileName);
           const avatarUrl = publicUrlData.publicUrl;
 
@@ -1102,17 +1132,17 @@
       const member = allMembers.find(m => m.id === memberId);
       if (member && member.avatar_url) {
         const oldFileName = member.avatar_url.split('/').pop();
-      if (oldFileName) {
-        await db.storage.from('avatars').remove([oldFileName]);
+        if (oldFileName) {
+          await db.storage.from('avatars').remove([oldFileName]);
+        }
       }
-    }
 
-  await db.from('members').update({ avatar_url: null }).eq('id', memberId);
-  await fetchAllData();
-  renderMasterMemberList();
-  renderMain();
-  if (activeTabName === 'detail') loadDetailSession(currentSessionId);
-}
+      await db.from('members').update({ avatar_url: null }).eq('id', memberId);
+      await fetchAllData();
+      renderMasterMemberList();
+      renderMain();
+      if (activeTabName === 'detail') loadDetailSession(currentSessionId);
+    }
 
     async function addMasterMember() {
       const name = document.getElementById('newMasterName').value.trim();
@@ -1398,19 +1428,14 @@
       const activeDates = filteredSessions.map(s => s.play_date);
       allMembers.forEach(m => {
         let runningTotal = 0;
-        let hasPlayed = false;
         activeDates.forEach(d => {
           if (dailyMemberPt[d] && dailyMemberPt[d][m.id] !== undefined) {
             runningTotal += dailyMemberPt[d][m.id];
-            hasPlayed = true;
-          }
-          if (hasPlayed) {
             memberStats[m.id].dailyTrend[d] = runningTotal;
           }
         });
       });
 
-      // 各計算指標をメンバーオブジェクトに付与
       Object.values(memberStats).forEach(st => {
         const gc = st.gamesCount;
         if (gc > 0) {
@@ -1448,7 +1473,6 @@
       renderStatsDetail();
     }
 
-    /* 選択した項目に基づいてランキングリストを描画 */
     function renderStatsRankList() {
       if (!window.cachedStats) return;
       const rankList = document.getElementById('stats-rank-list');
@@ -1457,14 +1481,13 @@
       const sortKey = document.getElementById('stats-sort-select').value;
       let sorted = Object.values(window.cachedStats);
 
-      // ソート処理
       sorted.sort((a, b) => {
         if (a.gamesCount === 0 && b.gamesCount === 0) return 0;
         if (a.gamesCount === 0) return 1;
         if (b.gamesCount === 0) return -1;
 
         if (sortKey === 'avgRank') {
-          return a.avgRank - b.avgRank; // 平均順位のみ数字が小さい方が上位
+          return a.avgRank - b.avgRank;
         } else {
           return b[sortKey] - a[sortKey];
         }
@@ -1552,7 +1575,6 @@
       const r3Rate = ((st.ranks[2] / st.gamesCount) * 100).toFixed(1);
       const r4Rate = ((st.ranks[3] / st.gamesCount) * 100).toFixed(1);
 
-      // --- 変動係数 (CV = SD / Mean) の計算 ---
       const sdRaw = calculateSD(st.rawList, st.avgRaw);
       const cvRaw = st.avgRaw > 0 ? ((sdRaw / st.avgRaw) * 100).toFixed(1) : '0.0';
 
@@ -1574,7 +1596,6 @@
       document.getElementById('stat-top-avg-score').innerText = st.ranks[0] > 0 ? `${st.topAvgRaw.toLocaleString()} 点` : '-';
       document.getElementById('stat-top-sd-score').innerText = st.ranks[0] > 0 ? `CV: ${cvTopRaw}%` : 'CV: -';
 
-      /* 対人戦績：相手画像は入れずシンプルに「vs 名前」 */
       const vsList = document.getElementById('stats-vs-list');
       vsList.innerHTML = '';
       const oppKeys = Object.keys(st.vs);
@@ -1607,9 +1628,11 @@
       renderTrendChart(st);
     }
 
+    /* 個人スタッツのグラフ描画（対局の無い日はプロットしない） */
     function renderTrendChart(st) {
       const dates = window.cachedDates || [];
-      const chartData = dates.map(d => st.dailyTrend[d] !== undefined ? st.dailyTrend[d] : null);
+      const playedDates = dates.filter(d => st.dailyTrend[d] !== undefined);
+      const chartData = playedDates.map(d => st.dailyTrend[d]);
 
       const ctx = document.getElementById('scoreTrendChart').getContext('2d');
 
@@ -1620,7 +1643,7 @@
       trendChart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: dates,
+          labels: playedDates,
           datasets: [{
             label: `${st.name} の累積点数 (Pt)`,
             data: chartData,
