@@ -35,83 +35,83 @@
       --border-color: #cbd5e1;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 60px; overflow-x: hidden; font-size: 0.82rem; }
+    body { background-color: var(--bg-color); color: var(--text-main); padding-bottom: 68px; overflow-x: hidden; font-size: 0.88rem; }
 
-    header { background-color: var(--header-bg); color: white; padding: 10px 12px; font-weight: bold; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; }
+    header { background-color: var(--header-bg); color: white; padding: 12px 14px; font-weight: bold; font-size: 1.02rem; display: flex; justify-content: space-between; align-items: center; }
     
     .period-filter-container { 
       position: sticky; 
       top: 0; 
       z-index: 20; 
       background: #cdd8ca; 
-      padding: 6px 12px; 
+      padding: 8px 14px; 
       border-bottom: 1px solid var(--border-color); 
       box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
-    .period-row { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-    .period-select, .period-input { padding: 3px 6px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.75rem; background: white; }
+    .period-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .period-select, .period-input { padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.82rem; background: white; }
 
-    .container { max-width: 600px; margin: 0 auto; padding: 8px; }
+    .container { max-width: 620px; margin: 0 auto; padding: 10px; }
 
-    .btn { background: var(--header-bg); color: white; border: none; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 0.8rem; cursor: pointer; }
+    .btn { background: var(--header-bg); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; cursor: pointer; }
     .btn-secondary { background: #64748b; }
     .btn-danger { background: #991b1b; color: white; }
-    .btn-sm { font-size: 0.7rem; padding: 3px 6px; }
+    .btn-sm { font-size: 0.75rem; padding: 4px 8px; }
 
-    .card { background: var(--card-bg); border-radius: 8px; border: 1px solid #c2cdc0; padding: 8px 10px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
-    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 4px; }
-    .card-title { font-weight: bold; font-size: 0.85rem; }
+    .card { background: var(--card-bg); border-radius: 8px; border: 1px solid #c2cdc0; padding: 10px 12px; margin-bottom: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 6px; }
+    .card-title { font-weight: bold; font-size: 0.92rem; }
 
-    .summary-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
-    .summary-item { background: white; border-radius: 6px; padding: 6px 8px; min-width: 72px; text-align: center; border: 1px solid var(--border-color); flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-    .summary-name { font-size: 0.7rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65px; }
-    .summary-score { font-size: 0.8rem; font-weight: bold; }
+    .summary-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 10px; }
+    .summary-item { background: white; border-radius: 6px; padding: 8px 10px; min-width: 80px; text-align: center; border: 1px solid var(--border-color); flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .summary-name { font-size: 0.75rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px; }
+    .summary-score { font-size: 0.85rem; font-weight: bold; }
 
-    .session-scores-list { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; background: white; padding: 6px; border-radius: 5px; border: 1px solid var(--border-color); }
-    .session-score-item { font-size: 0.75rem; display: flex; align-items: center; gap: 3px; }
+    .session-scores-list { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; background: white; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); }
+    .session-score-item { font-size: 0.8rem; display: flex; align-items: center; gap: 4px; }
 
     .pt-plus { color: var(--plus-color); font-weight: bold; }
     .pt-minus { color: var(--minus-color); font-weight: bold; }
 
     /* アバター用スタイル */
-    .avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; display: inline-flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 0.75rem; flex-shrink: 0; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; display: inline-flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 0.82rem; flex-shrink: 0; }
     .avatar-clickable { cursor: pointer; transition: transform 0.1s; }
     .avatar-clickable:active { transform: scale(0.92); }
-    .avatar-sm { width: 18px; height: 18px; font-size: 0.6rem; }
+    .avatar-sm { width: 22px; height: 22px; font-size: 0.68rem; }
 
     /* テーブル */
-    table { width: 100%; border-collapse: collapse; background: white; text-align: center; font-size: 0.72rem; }
-    th, td { border: 1px solid var(--border-color); padding: 4px 1px; min-width: 48px; }
+    table { width: 100%; border-collapse: collapse; background: white; text-align: center; font-size: 0.78rem; }
+    th, td { border: 1px solid var(--border-color); padding: 6px 2px; min-width: 52px; }
     th { background: #dbe4d8; vertical-align: middle; }
-    .score-cell { cursor: pointer; height: 48px; vertical-align: middle; line-height: 1.15; }
+    .score-cell { cursor: pointer; height: 52px; vertical-align: middle; line-height: 1.2; }
 
     /* 戦績 */
-    .rank-item { background: white; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background-color 0.2s; }
+    .rank-item { background: white; border-radius: 6px; padding: 8px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background-color 0.2s; }
     .rank-item:active { background-color: #e2e8f0; }
-    .rank-num { font-weight: bold; width: 20px; color: #64748b; font-size: 0.8rem; }
-    .rank-name { font-weight: bold; flex-grow: 1; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; }
-    .stats-box { background: white; border-radius: 8px; padding: 10px; margin-top: 8px; }
-    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-top: 6px; text-align: center; }
-    .stat-card { background: #f8fafc; padding: 6px; border-radius: 5px; border: 1px solid #e2e8f0; }
+    .rank-num { font-weight: bold; width: 24px; color: #64748b; font-size: 0.85rem; }
+    .rank-name { font-weight: bold; flex-grow: 1; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+    .stats-box { background: white; border-radius: 8px; padding: 12px; margin-top: 10px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; text-align: center; }
+    .stat-card { background: #f8fafc; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
 
-    .rule-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; font-size: 0.78rem; }
-    .rule-title { font-weight: bold; color: var(--header-bg); border-bottom: 2px solid #cbd5e1; padding-bottom: 2px; margin-bottom: 6px; font-size: 0.82rem; }
-    .rule-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+    .rule-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; font-size: 0.82rem; }
+    .rule-title { font-weight: bold; color: var(--header-bg); border-bottom: 2px solid #cbd5e1; padding-bottom: 3px; margin-bottom: 8px; font-size: 0.88rem; }
+    .rule-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
     .rule-label { color: #64748b; }
     .rule-val { font-weight: bold; color: #1e293b; }
 
-    .navbar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border-color); display: flex; justify-around: space-around; padding: 5px 0; z-index: 100; }
-    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 0.68rem; color: #64748b; cursor: pointer; border: none; background: none; flex: 1; }
+    .navbar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid var(--border-color); display: flex; justify-content: space-around; padding: 6px 0; z-index: 100; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 0.72rem; color: #64748b; cursor: pointer; border: none; background: none; flex: 1; }
     .nav-item.active { color: var(--header-bg); font-weight: bold; }
 
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: flex-end; z-index: 200; }
     .modal.active { display: flex; }
-    .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 12px 12px 0 0; padding: 14px; max-height: 85vh; overflow-y: auto; }
-    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
-    .key { padding: 10px; font-size: 1rem; font-weight: bold; background: #f1f5f9; border-radius: 6px; text-align: center; cursor: pointer; user-select: none; }
+    .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 12px 12px 0 0; padding: 16px; max-height: 85vh; overflow-y: auto; }
+    .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .key { padding: 12px; font-size: 1.05rem; font-weight: bold; background: #f1f5f9; border-radius: 6px; text-align: center; cursor: pointer; user-select: none; }
     .key:active { background: #cbd5e1; }
     .key.disabled { opacity: 0.3; pointer-events: none; }
-    .key.submit { background: var(--header-bg); color: white; grid-column: span 3; padding: 10px; }
+    .key.submit { background: var(--header-bg); color: white; grid-column: span 3; padding: 12px; }
 
     .tab-content { display: none; }
     .tab-content.active { display: block; }
@@ -127,15 +127,15 @@
       background: linear-gradient(135deg, #3b82f6, #1d4ed8);
       color: #ffffff;
       border: none;
-      padding: 6px 12px;
+      padding: 7px 14px;
       border-radius: 20px;
       font-weight: bold;
-      font-size: 0.78rem;
+      font-size: 0.82rem;
       cursor: pointer;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
       transition: all 0.15s ease;
       outline: none;
       -webkit-tap-highlight-color: transparent;
@@ -149,21 +149,21 @@
 
     /* 対局作成モーダル専用スタイル */
     .form-group {
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
     .form-label {
       display: block;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       font-weight: bold;
       color: #4a5568;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
     }
     .form-input {
       width: 100%;
-      padding: 8px 10px;
+      padding: 9px 12px;
       border: 1px solid var(--border-color);
       border-radius: 6px;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       background: #f8fafc;
       outline: none;
     }
@@ -185,7 +185,7 @@
 
   <div class="period-filter-container" id="period-filter-bar">
     <div class="period-row">
-      <span style="font-size:0.7rem; font-weight:bold; color:#4a5568;">期間:</span>
+      <span style="font-size:0.75rem; font-weight:bold; color:#4a5568;">期間:</span>
       <select id="period-type-select" class="period-select" onchange="onPeriodTypeChange()">
         <option value="all">全期間</option>
         <option value="half">半期指定</option>
@@ -193,7 +193,7 @@
         <option value="month">年月指定</option>
         <option value="range">任意期間 (年月〜年月)</option>
       </select>
-      <span id="filter-inputs-area" style="display:flex; gap:3px; align-items:center;"></span>
+      <span id="filter-inputs-area" style="display:flex; gap:4px; align-items:center;"></span>
     </div>
   </div>
 
@@ -201,12 +201,12 @@
 
     <!-- 1. メイン画面 -->
     <div id="tab-main" class="tab-content active">
-      <div style="font-size:0.82rem; font-weight:bold; margin-bottom:8px;">期間内サマリー</div>
+      <div style="font-size:0.88rem; font-weight:bold; margin-bottom:10px;">期間内サマリー</div>
 
       <div class="summary-scroll" id="main-summary-scroll"></div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span style="font-size:0.8rem; font-weight:bold; color:#4a5568;">対局一覧</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:0.85rem; font-weight:bold; color:#4a5568;">対局一覧</span>
         <button class="btn btn-sm" onclick="createNewSession()">＋ 新しい対局日を作成</button>
       </div>
 
@@ -215,25 +215,25 @@
 
     <!-- 2. 詳細画面 -->
     <div id="tab-detail" class="tab-content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <button class="btn btn-sm btn-secondary" onclick="switchTab('main')">← メインに戻る</button>
         <button class="btn btn-sm btn-secondary" onclick="openSettingsModal()">⚙️ 対局設定</button>
       </div>
       <div class="card">
         <div class="card-header">
           <span class="card-title" id="detail-session-title">対局詳細</span>
-          <div style="display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;">
+          <div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end;">
             <button class="btn btn-sm" onclick="openAddSessionMemberModal()">＋ メンバー</button>
             <button class="btn btn-sm btn-secondary" onclick="addNewGame()">＋ 半荘追加</button>
           </div>
         </div>
-        <p style="font-size: 0.65rem; color: #64748b; margin-bottom: 6px;">マス目をタップしてスコアを入力</p>
+        <p style="font-size: 0.7rem; color: #64748b; margin-bottom: 8px;">マス目をタップしてスコアを入力</p>
 
         <div style="overflow-x: auto;">
           <table>
             <thead>
               <tr id="detail-header-row">
-                <th style="width: 38px; min-width: 38px;">半荘</th>
+                <th style="width: 42px; min-width: 42px;">半荘</th>
               </tr>
             </thead>
             <tbody id="detail-score-body"></tbody>
@@ -249,8 +249,8 @@
 
     <!-- 3. 戦績画面 -->
     <div id="tab-stats" class="tab-content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px;">
-        <span style="font-size: 0.8rem; font-weight: bold; color: #4a5568;">ランキング表示</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:5px;">
+        <span style="font-size: 0.85rem; font-weight: bold; color: #4a5568;">ランキング表示</span>
         <select id="stats-sort-select" class="period-select" onchange="renderStatsRankList()">
           <option value="totalPt">通算Pt (高い順)</option>
           <option value="avgRank">平均順位 (良い順)</option>
@@ -265,49 +265,49 @@
       <div id="stats-rank-list"></div>
 
       <div class="stats-box" id="personal-stats-box">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
-          <span style="font-weight: bold; font-size: 0.88rem;">📊 個人スタッツ</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
+          <span style="font-weight: bold; font-size: 0.92rem;">📊 個人スタッツ</span>
           <select id="stats-member-select" onchange="renderStatsDetail()" class="period-select"></select>
         </div>
 
-        <div style="margin-top: 8px; height: 160px; position: relative;">
+        <div style="margin-top: 10px; height: 170px; position: relative;">
           <canvas id="scoreTrendChart"></canvas>
         </div>
 
         <div class="stats-grid">
           <div class="stat-card">
-            <div style="font-size:0.65rem; color:#64748b;">平均順位</div>
-            <div id="stat-avg-rank" style="font-size:0.9rem; font-weight:bold;">- 位</div>
+            <div style="font-size:0.7rem; color:#64748b;">平均順位</div>
+            <div id="stat-avg-rank" style="font-size:0.95rem; font-weight:bold;">- 位</div>
           </div>
           <div class="stat-card">
-            <div style="font-size:0.65rem; color:#64748b;">トップ率</div>
-            <div id="stat-top-rate" style="font-size:0.9rem; font-weight:bold;">- %</div>
-            <div id="stat-sub-ranks" style="font-size:0.58rem; color:#64748b; margin-top:1px;">-</div>
+            <div style="font-size:0.7rem; color:#64748b;">トップ率</div>
+            <div id="stat-top-rate" style="font-size:0.95rem; font-weight:bold;">- %</div>
+            <div id="stat-sub-ranks" style="font-size:0.62rem; color:#64748b; margin-top:2px;">-</div>
           </div>
           <div class="stat-card">
-            <div style="font-size:0.65rem; color:#64748b;">連対率</div>
-            <div id="stat-rentai-rate" style="font-size:0.9rem; font-weight:bold;">- %</div>
+            <div style="font-size:0.7rem; color:#64748b;">連対率</div>
+            <div id="stat-rentai-rate" style="font-size:0.95rem; font-weight:bold;">- %</div>
           </div>
           <div class="stat-card">
-            <div style="font-size:0.65rem; color:#64748b;">ラス回避率</div>
-            <div id="stat-avoid-last-rate" style="font-size:0.9rem; font-weight:bold;">- %</div>
-          </div>
-
-          <div class="stat-card">
-            <div style="font-size:0.65rem; color:#64748b;">平均持ち点 (点)</div>
-            <div id="stat-avg-score" style="font-size:0.85rem; font-weight:bold;">-</div>
-            <div id="stat-sd-score" style="font-size:0.6rem; color:#64748b;">CV: -</div>
+            <div style="font-size:0.7rem; color:#64748b;">ラス回避率</div>
+            <div id="stat-avoid-last-rate" style="font-size:0.95rem; font-weight:bold;">- %</div>
           </div>
 
           <div class="stat-card">
-            <div style="font-size:0.65rem; color:#64748b;">トップ時平均 (点)</div>
-            <div id="stat-top-avg-score" style="font-size:0.85rem; font-weight:bold;">-</div>
-            <div id="stat-top-sd-score" style="font-size:0.6rem; color:#64748b;">CV: -</div>
+            <div style="font-size:0.7rem; color:#64748b;">平均持ち点 (点)</div>
+            <div id="stat-avg-score" style="font-size:0.9rem; font-weight:bold;">-</div>
+            <div id="stat-sd-score" style="font-size:0.65rem; color:#64748b;">CV: -</div>
+          </div>
+
+          <div class="stat-card">
+            <div style="font-size:0.7rem; color:#64748b;">トップ時平均 (点)</div>
+            <div id="stat-top-avg-score" style="font-size:0.9rem; font-weight:bold;">-</div>
+            <div id="stat-top-sd-score" style="font-size:0.65rem; color:#64748b;">CV: -</div>
           </div>
         </div>
 
-        <div style="font-weight: bold; font-size: 0.8rem; margin-top: 10px; margin-bottom: 4px;">対人戦績 (1vs1 持ち点差)</div>
-        <div id="stats-vs-list" style="font-size: 0.75rem; background: #f8fafc; border-radius: 5px; padding: 6px;"></div>
+        <div style="font-weight: bold; font-size: 0.85rem; margin-top: 12px; margin-bottom: 6px;">対人戦績 (1vs1 持ち点差)</div>
+        <div id="stats-vs-list" style="font-size: 0.8rem; background: #f8fafc; border-radius: 6px; padding: 8px;"></div>
       </div>
     </div>
 
@@ -315,11 +315,11 @@
 
   <nav class="navbar">
     <button class="nav-item active" onclick="switchTab('main')">
-      <span style="font-size:1.1rem;">🏠</span>
+      <span style="font-size:1.2rem;">🏠</span>
       <span>メイン</span>
     </button>
     <button class="nav-item" onclick="switchTab('stats')">
-      <span style="font-size:1.1rem;">📊</span>
+      <span style="font-size:1.2rem;">📊</span>
       <span>戦績・統計</span>
     </button>
   </nav>
@@ -327,12 +327,12 @@
   <!-- マスターメンバー管理モーダル -->
   <div class="modal" id="masterMemberModal">
     <div class="modal-content">
-      <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-        <span style="font-weight:bold; font-size:0.9rem;">👥 全メンバー一覧（マスター管理）</span>
-        <span onclick="closeModal('masterMemberModal')" style="cursor:pointer; font-weight:bold;">✕</span>
+      <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+        <span style="font-weight:bold; font-size:0.95rem;">👥 全メンバー一覧（マスター管理）</span>
+        <span onclick="closeModal('masterMemberModal')" style="cursor:pointer; font-weight:bold; font-size:1.1rem;">✕</span>
       </div>
-      <div style="display:flex; gap:6px; margin-bottom:10px;">
-        <input type="text" id="newMasterName" placeholder="新しいメンバー名" style="flex-grow:1; padding:6px; border:1px solid #cbd5e1; border-radius:5px; font-size:0.8rem;">
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <input type="text" id="newMasterName" placeholder="新しいメンバー名" style="flex-grow:1; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
         <button class="btn btn-sm" onclick="addMasterMember()">追加</button>
       </div>
       <input type="file" id="avatarFileInput" accept="image/*" style="display:none;" onchange="handleAvatarSelected(event)">
@@ -342,9 +342,9 @@
 
   <div class="modal" id="addSessionMemberModal">
     <div class="modal-content">
-      <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-        <span style="font-weight:bold; font-size:0.9rem;">対局メンバー選択</span>
-        <span onclick="closeModal('addSessionMemberModal')" style="cursor:pointer; font-weight:bold;">✕</span>
+      <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+        <span style="font-weight:bold; font-size:0.95rem;">対局メンバー選択</span>
+        <span onclick="closeModal('addSessionMemberModal')" style="cursor:pointer; font-weight:bold; font-size:1.1rem;">✕</span>
       </div>
       <div id="sessionMemberSelectList" style="max-height:240px; overflow-y:auto;"></div>
     </div>
@@ -352,9 +352,9 @@
 
   <div class="modal" id="settingsModal">
     <div class="modal-content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <span style="font-weight:bold; font-size:0.9rem;">⚙️ 対局ルール・計算設定</span>
-        <span onclick="closeModal('settingsModal')" style="cursor:pointer; font-weight:bold;">✕</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <span style="font-weight:bold; font-size:0.95rem;">⚙️ 対局ルール・計算設定</span>
+        <span onclick="closeModal('settingsModal')" style="cursor:pointer; font-weight:bold; font-size:1.1rem;">✕</span>
       </div>
 
       <div class="rule-box">
@@ -372,27 +372,27 @@
         <div class="rule-row"><span class="rule-label">2位:</span><span class="rule-val pt-plus">+10.0 P</span></div>
         <div class="rule-row"><span class="rule-label">3位:</span><span class="rule-val pt-minus">-10.0 P</span></div>
         <div class="rule-row"><span class="rule-label">4位（ラス）:</span><span class="rule-val pt-minus">-30.0 P</span></div>
-        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #cbd5e1; font-size: 0.72rem; color: #64748b;">
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #cbd5e1; font-size: 0.76rem; color: #64748b;">
           ※同点の場合は、該当する順位の順位点を合計し等分（山分け）します。
         </div>
       </div>
 
-      <button class="btn btn-sm" style="width:100%; padding:8px; margin-top:4px;" onclick="closeModal('settingsModal')">閉じる</button>
+      <button class="btn btn-sm" style="width:100%; padding:10px; margin-top:6px;" onclick="closeModal('settingsModal')">閉じる</button>
     </div>
   </div>
 
   <div class="modal" id="inputModal">
     <div class="modal-content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <div>
-          <span style="font-weight:bold; font-size:0.9rem;" id="inputModalTitle">スコア入力</span>
-          <div id="currentModeLabel" style="font-size:0.75rem; color:#1e40af; font-weight:bold; margin-top:1px;">現在のモード: 持ち点入力</div>
+          <span style="font-weight:bold; font-size:0.95rem;" id="inputModalTitle">スコア入力</span>
+          <div id="currentModeLabel" style="font-size:0.78rem; color:#1e40af; font-weight:bold; margin-top:2px;">現在のモード: 持ち点入力</div>
         </div>
         <button class="btn btn-sm btn-secondary" id="modeSwitchBtn" onclick="toggleInputMode()">Pt入力に切り替え</button>
-        <span onclick="closeModal('inputModal')" style="cursor:pointer; font-weight:bold; font-size:1rem; padding:0 4px;">✕</span>
+        <span onclick="closeModal('inputModal')" style="cursor:pointer; font-weight:bold; font-size:1.1rem; padding:0 4px;">✕</span>
       </div>
       
-      <div id="modalDisplay" style="font-size:1.3rem; text-align:right; padding:6px 10px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:5px; font-weight:bold; min-height:42px;">0</div>
+      <div id="modalDisplay" style="font-size:1.35rem; text-align:right; padding:8px 12px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; font-weight:bold; min-height:46px;">0</div>
 
       <div class="keypad">
         <div class="key" onclick="pressKey('7')">7</div>
@@ -410,7 +410,7 @@
         <div class="key" id="key-00" onclick="pressKey('00')">00</div>
         <div class="key" style="background:#fee2e2; color:#991b1b;" onclick="clearAllInput()">C (全消去)</div>
         <div class="key" onclick="pressKey('BS')">⌫</div>
-        <div class="key" style="grid-column: span 3; background:#e2e8f0; color:#991b1b; padding:6px; font-size:0.8rem;" onclick="clearScore()">この半荘を抜け番にする</div>
+        <div class="key" style="grid-column: span 3; background:#e2e8f0; color:#991b1b; padding:8px; font-size:0.85rem;" onclick="clearScore()">この半荘を抜け番にする</div>
         <div class="key submit" onclick="saveScore()">決定</div>
       </div>
     </div>
@@ -419,9 +419,9 @@
   <!-- 対局日作成モーダル -->
   <div class="modal" id="createSessionModal">
     <div class="modal-content">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <span style="font-weight:bold; font-size:0.95rem;">🀄️ 新しい対局日を作成</span>
-        <span onclick="closeModal('createSessionModal')" style="cursor:pointer; font-weight:bold; font-size:1.1rem;">✕</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <span style="font-weight:bold; font-size:1rem;">🀄️ 新しい対局日を作成</span>
+        <span onclick="closeModal('createSessionModal')" style="cursor:pointer; font-weight:bold; font-size:1.2rem;">✕</span>
       </div>
       
       <div class="form-group">
@@ -434,22 +434,22 @@
         <input type="text" id="newSessionTitle" class="form-input" placeholder="例: 4麻セット、第3回リーグ戦">
       </div>
 
-      <div style="display:flex; gap:8px; margin-top:16px;">
-        <button class="btn btn-secondary" style="flex:1; padding:8px;" onclick="closeModal('createSessionModal')">キャンセル</button>
-        <button class="btn" style="flex:1; padding:8px; background:#2563eb;" onclick="submitNewSession()">作成する</button>
+      <div style="display:flex; gap:10px; margin-top:18px;">
+        <button class="btn btn-secondary" style="flex:1; padding:10px;" onclick="closeModal('createSessionModal')">キャンセル</button>
+        <button class="btn" style="flex:1; padding:10px; background:#2563eb;" onclick="submitNewSession()">作成する</button>
       </div>
     </div>
   </div>
 
   <!-- 画像トリミング用モーダル -->
   <div class="full-modal" id="cropModal">
-    <div style="color:white; font-size:0.85rem; font-weight:bold; margin-bottom:8px;">ドラッグ・ピンチ操作で枠位置を調整</div>
-    <div style="max-width: 85vw; max-height: 60vh; width: 300px; height: 300px;">
+    <div style="color:white; font-size:0.9rem; font-weight:bold; margin-bottom:10px;">ドラッグ・ピンチ操作で枠位置を調整</div>
+    <div style="max-width: 85vw; max-height: 60vh; width: 320px; height: 320px;">
       <img id="cropImageTarget" style="max-width: 100%; display: block;">
     </div>
-    <div style="display:flex; gap:10px; margin-top:16px;">
+    <div style="display:flex; gap:12px; margin-top:18px;">
       <button class="btn btn-secondary btn-sm" onclick="closeCropModal()">キャンセル</button>
-      <button class="btn btn-sm" style="background:#2563eb; padding: 6px 16px;" onclick="cropAndUpload()">決定して保存</button>
+      <button class="btn btn-sm" style="background:#2563eb; padding: 8px 18px;" onclick="cropAndUpload()">決定して保存</button>
     </div>
   </div>
 
@@ -457,8 +457,8 @@
   <div class="full-modal" id="imageViewerModal" onclick="closeImageViewer()">
     <div style="position:relative; text-align:center;" onclick="event.stopPropagation()">
       <div id="imageViewerContent"></div>
-      <div id="imageViewerName" style="color:white; margin-top:10px; font-weight:bold; font-size:1rem;"></div>
-      <button class="btn btn-secondary btn-sm" style="margin-top:12px;" onclick="closeImageViewer()">閉じる</button>
+      <div id="imageViewerName" style="color:white; margin-top:12px; font-weight:bold; font-size:1.05rem;"></div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:14px;" onclick="closeImageViewer()">閉じる</button>
     </div>
   </div>
 
@@ -588,19 +588,19 @@
         const currMonthNum = now.getMonth() + 1;
         const defaultHalf = currMonthNum <= 6 ? '1' : '2';
         area.innerHTML = `
-          <input type="number" id="filter-half-year" class="period-input" style="width:58px;" value="${currentYear}" min="2000" max="2100" onchange="triggerFilterUpdate()"> 年
+          <input type="number" id="filter-half-year" class="period-input" style="width:62px;" value="${currentYear}" min="2000" max="2100" onchange="triggerFilterUpdate()"> 年
           <select id="filter-half-val" class="period-select" onchange="triggerFilterUpdate()">
             <option value="1" ${defaultHalf==='1'?'selected':''}>上半期 (1〜6月)</option>
             <option value="2" ${defaultHalf==='2'?'selected':''}>下半期 (7〜12月)</option>
           </select>`;
       } else if (type === 'year') {
-        area.innerHTML = `<input type="number" id="filter-year" class="period-input" style="width:62px;" value="${currentYear}" min="2000" max="2100" onchange="triggerFilterUpdate()"> 年`;
+        area.innerHTML = `<input type="number" id="filter-year" class="period-input" style="width:66px;" value="${currentYear}" min="2000" max="2100" onchange="triggerFilterUpdate()"> 年`;
       } else if (type === 'month') {
         area.innerHTML = `<input type="month" id="filter-month" class="period-input" value="${currentMonth}" onchange="triggerFilterUpdate()">`;
       } else if (type === 'range') {
         area.innerHTML = `
           <input type="date" id="filter-start-date" class="period-input" value="${currentYear}-01-01" onchange="triggerFilterUpdate()">
-          <span style="font-size:0.7rem;">〜</span>
+          <span style="font-size:0.75rem;">〜</span>
           <input type="date" id="filter-end-date" class="period-input" value="${todayStr}" onchange="triggerFilterUpdate()">`;
       }
       triggerFilterUpdate();
@@ -763,7 +763,7 @@
       const cList = document.getElementById('session-card-list');
       cList.innerHTML = '';
       if (filteredSessions.length === 0) {
-        cList.innerHTML = '<p style="font-size:0.8rem; color:#64748b; padding:8px 0;">選択した期間の対局データがありません。</p>';
+        cList.innerHTML = '<p style="font-size:0.85rem; color:#64748b; padding:10px 0;">選択した期間の対局データがありません。</p>';
         return;
       }
 
@@ -791,7 +791,7 @@
           });
           scoreHtml += '</div>';
         } else {
-          scoreHtml = '<div style="font-size:0.7rem; color:#94a3b8; margin-top:2px;">対局データ未入力</div>';
+          scoreHtml = '<div style="font-size:0.75rem; color:#94a3b8; margin-top:3px;">対局データ未入力</div>';
         }
 
         cList.innerHTML += `
@@ -801,7 +801,7 @@
               <button class="btn btn-sm btn-danger" onclick="deleteSession(event, '${s.id}', '${s.play_date}')">削除</button>
             </div>
             ${scoreHtml}
-            <div style="text-align:right; font-size:0.7rem; font-weight:bold; color:var(--header-bg); margin-top:4px;">詳細・点数入力 ＞</div>
+            <div style="text-align:right; font-size:0.75rem; font-weight:bold; color:var(--header-bg); margin-top:6px;">詳細・点数入力 ＞</div>
           </div>`;
       });
     }
@@ -890,11 +890,11 @@
 
     function renderDetailTable(games) {
       const hRow = document.getElementById('detail-header-row');
-      hRow.innerHTML = '<th style="width: 38px; min-width: 38px;">半荘</th>';
+      hRow.innerHTML = '<th style="width: 42px; min-width: 42px;">半荘</th>';
       currentSessionMembers.forEach(m => {
         hRow.innerHTML += `
           <th>
-            <div style="display:flex; flex-direction:column; align-items:center; gap:1px;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
               ${renderAvatarHtml(m, 'avatar-sm')}
               <span>${m.name}</span>
             </div>
@@ -936,9 +936,9 @@
 
             tr += `
               <td class="score-cell" onclick="openInputModal('${g.id}', '${m.id}')">
-                <div class="${ptClass}" style="font-size:0.75rem;">${ptSign}${res.rawPt.toFixed(1)} P</div>
-                <div style="font-size:0.6rem; color:#4a5568;">(${rankSign} P)</div>
-                <div style="font-size:0.6rem; color:#64748b;">${res.raw.toLocaleString()}点</div>
+                <div class="${ptClass}" style="font-size:0.8rem;">${ptSign}${res.rawPt.toFixed(1)} P</div>
+                <div style="font-size:0.65rem; color:#4a5568;">(${rankSign} P)</div>
+                <div style="font-size:0.65rem; color:#64748b;">${res.raw.toLocaleString()}点</div>
               </td>`;
           } else {
             tr += `<td class="score-cell" onclick="openInputModal('${g.id}', '${m.id}')" style="color:#94a3b8;">ー</td>`;
@@ -1012,14 +1012,14 @@
       list.innerHTML = '';
       allMembers.forEach(m => {
         list.innerHTML += `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
-            <div style="display:flex; align-items:center; gap:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
+            <div style="display:flex; align-items:center; gap:8px;">
               ${renderAvatarHtml(m, '', true)}
-              <span style="font-weight:bold; cursor:pointer;" onclick="openImageViewer('${m.id}')">${m.name}</span>
+              <span style="font-weight:bold; cursor:pointer; font-size:0.9rem;" onclick="openImageViewer('${m.id}')">${m.name}</span>
             </div>
-            <div style="display:flex; gap:3px; align-items:center;">
+            <div style="display:flex; gap:4px; align-items:center;">
               <button class="btn btn-sm btn-secondary" onclick="triggerAvatarUpload('${m.id}')">画像変更</button>
-              ${m.avatar_url ? `<button class="btn btn-sm btn-secondary" style="padding:2px 4px;" onclick="removeAvatar('${m.id}')" title="画像削除">✕</button>` : ''}
+              ${m.avatar_url ? `<button class="btn btn-sm btn-secondary" style="padding:3px 6px;" onclick="removeAvatar('${m.id}')" title="画像削除">✕</button>` : ''}
               <button class="btn btn-sm btn-secondary" onclick="editMasterMember('${m.id}', '${m.name}')">編集</button>
               <button class="btn btn-sm btn-danger" onclick="deleteMasterMember('${m.id}')">削除</button>
             </div>
@@ -1185,10 +1185,10 @@
       allMembers.forEach(m => {
         const isJoined = currentSessionMembers.some(sm => sm.id === m.id);
         list.innerHTML += `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eee;">
-            <div style="display:flex; align-items:center; gap:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">
+            <div style="display:flex; align-items:center; gap:8px;">
               ${renderAvatarHtml(m, 'avatar-sm')}
-              <span>${m.name}</span>
+              <span style="font-size:0.9rem;">${m.name}</span>
             </div>
             <button class="btn btn-sm ${isJoined ? 'btn-secondary' : ''}" onclick="toggleSessionMember('${m.id}')">
               ${isJoined ? '参加中 (解除)' : '＋ 追加'}
@@ -1498,31 +1498,31 @@
         let displayValStr = '';
 
         if (st.gamesCount === 0) {
-          displayValStr = '<span style="color:#94a3b8; font-size:0.75rem;">データなし</span>';
+          displayValStr = '<span style="color:#94a3b8; font-size:0.8rem;">データなし</span>';
         } else {
           switch (sortKey) {
             case 'totalPt':
               const ptClass = st.totalPt >= 0 ? 'pt-plus' : 'pt-minus';
               const ptSign = st.totalPt >= 0 ? '+' : '';
-              displayValStr = `<span class="${ptClass}" style="font-size:0.8rem;">${ptSign}${st.totalPt.toFixed(1)} P</span>`;
+              displayValStr = `<span class="${ptClass}" style="font-size:0.85rem;">${ptSign}${st.totalPt.toFixed(1)} P</span>`;
               break;
             case 'avgRank':
-              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.avgRank.toFixed(2)} 位</span>`;
+              displayValStr = `<span style="font-weight:bold; font-size:0.85rem;">${st.avgRank.toFixed(2)} 位</span>`;
               break;
             case 'topRate':
-              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.topRate.toFixed(1)} %</span>`;
+              displayValStr = `<span style="font-weight:bold; font-size:0.85rem;">${st.topRate.toFixed(1)} %</span>`;
               break;
             case 'rentaiRate':
-              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.rentaiRate.toFixed(1)} %</span>`;
+              displayValStr = `<span style="font-weight:bold; font-size:0.85rem;">${st.rentaiRate.toFixed(1)} %</span>`;
               break;
             case 'avoidLastRate':
-              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.avoidLastRate.toFixed(1)} %</span>`;
+              displayValStr = `<span style="font-weight:bold; font-size:0.85rem;">${st.avoidLastRate.toFixed(1)} %</span>`;
               break;
             case 'avgRaw':
-              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.avgRaw.toLocaleString()} 点</span>`;
+              displayValStr = `<span style="font-weight:bold; font-size:0.85rem;">${st.avgRaw.toLocaleString()} 点</span>`;
               break;
             case 'topAvgRaw':
-              displayValStr = `<span style="font-weight:bold; font-size:0.8rem;">${st.ranks[0] > 0 ? st.topAvgRaw.toLocaleString() + ' 点' : '-'}</span>`;
+              displayValStr = `<span style="font-weight:bold; font-size:0.85rem;">${st.ranks[0] > 0 ? st.topAvgRaw.toLocaleString() + ' 点' : '-'}</span>`;
               break;
           }
         }
@@ -1532,7 +1532,7 @@
             <span class="rank-num">${idx + 1}</span>
             <div class="rank-name">
               ${renderAvatarHtml(memberObj, 'avatar-sm')}
-              <span>${st.name} <span style="font-size:0.7rem; font-weight:normal; color:#64748b;">(${st.gamesCount}局)</span></span>
+              <span>${st.name} <span style="font-size:0.75rem; font-weight:normal; color:#64748b;">(${st.gamesCount}局)</span></span>
             </div>
             ${displayValStr}
           </div>`;
@@ -1612,14 +1612,14 @@
           const avgSignStr = avgOppRawDiff >= 0 ? '+' : '';
 
           vsList.innerHTML += `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; border-bottom:1px dashed #e2e8f0; padding-bottom:3px;">
-              <div style="display:flex; align-items:center; gap:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; border-bottom:1px dashed #e2e8f0; padding-bottom:4px;">
+              <div style="display:flex; align-items:center; gap:5px;">
                 <span style="font-weight:bold;">vs ${oppName}</span>
-                <span style="font-size:0.65rem; color:#64748b;">(${v.count}局)</span>
+                <span style="font-size:0.7rem; color:#64748b;">(${v.count}局)</span>
               </div>
               <div style="text-align:right;">
-                <div class="${rawClass}" style="font-size:0.78rem;">計 ${rawSign}${v.diffRaw.toLocaleString()} 点</div>
-                <div style="font-size:0.62rem; color:#64748b;">平均 ${avgSignStr}${avgOppRawDiff.toLocaleString()} 点/局</div>
+                <div class="${rawClass}" style="font-size:0.82rem;">計 ${rawSign}${v.diffRaw.toLocaleString()} 点</div>
+                <div style="font-size:0.68rem; color:#64748b;">平均 ${avgSignStr}${avgOppRawDiff.toLocaleString()} 点/局</div>
               </div>
             </div>`;
         });
@@ -1652,7 +1652,7 @@
             borderWidth: 2,
             fill: true,
             tension: 0.2,
-            pointRadius: 3,
+            pointRadius: 3.5,
             pointBackgroundColor: '#2d3b32'
           }]
         },
@@ -1670,11 +1670,11 @@
           scales: {
             x: {
               grid: { display: false },
-              ticks: { font: { size: 8 }, maxRotation: 45, minRotation: 45 }
+              ticks: { font: { size: 9 }, maxRotation: 45, minRotation: 45 }
             },
             y: {
               grid: { color: '#e2e8f0' },
-              ticks: { font: { size: 9 } }
+              ticks: { font: { size: 10 } }
             }
           }
         }
