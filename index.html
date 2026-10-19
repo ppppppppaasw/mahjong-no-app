@@ -89,6 +89,22 @@
     th { background: #dbe4d8; vertical-align: middle; }
     .score-cell { cursor: pointer; height: 48px; vertical-align: middle; line-height: 1.15; }
 
+    /* 比較 */
+    .cmp-check-row { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px solid #edf2f7; font-size: 0.85rem; cursor: pointer; }
+    .cmp-check-row input { width: 18px; height: 18px; }
+    .cmp-swatch { display: inline-block; width: 18px; height: 4px; border-radius: 2px; }
+    .record-section { font-weight: bold; font-size: 0.83rem; margin-top: 12px; margin-bottom: 2px; padding: 3px 6px; border-radius: 4px; background: #f1f5f9; }
+    .record-sub { font-size: 0.63rem; color: #64748b; font-weight: normal; margin-left: 4px; }
+
+    .heat-table { border-collapse: collapse; font-size: 0.7rem; width: 100%; }
+    .heat-table th, .heat-table td { border: 1px solid #fff; padding: 5px 2px; min-width: 40px; text-align: center; }
+    .heat-table th { background: #f1f5f9; font-weight: bold; white-space: nowrap; }
+    .heat-table td.heat-self { background: #e2e8f0; color: #94a3b8; }
+    .combo-row { padding: 5px 2px; border-bottom: 1px dashed #e2e8f0; font-size: 0.75rem; }
+    .delta-up { color: #15803d; font-size: 0.62rem; font-weight: bold; margin-left: 3px; }
+    .delta-down { color: #b91c1c; font-size: 0.62rem; font-weight: bold; margin-left: 3px; }
+    .delta-flat { color: #94a3b8; font-size: 0.62rem; margin-left: 3px; }
+
     /* 記録 */
     .record-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px dashed #e2e8f0; font-size: 0.8rem; }
     .record-row:last-child { border-bottom: none; }
@@ -280,8 +296,14 @@
       <div class="stats-box" id="personal-stats-box">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
           <span style="font-weight: bold; font-size: 0.92rem;">📊 個人スタッツ</span>
-          <select id="stats-member-select" onchange="renderStatsDetail()" class="period-select"></select>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:0.72rem; display:flex; align-items:center; gap:3px; cursor:pointer; white-space:nowrap;">
+              <input type="checkbox" id="stats-recent-check" onchange="renderStatsDetail()"> 直近10戦
+            </label>
+            <select id="stats-member-select" onchange="renderStatsDetail()" class="period-select"></select>
+          </div>
         </div>
+        <div id="stats-recent-note" style="display:none; font-size:0.63rem; color:#64748b; margin-top:3px;"></div>
 
         <div style="margin-top: 8px; height: 160px; position: relative;">
           <canvas id="scoreTrendChart"></canvas>
@@ -347,10 +369,44 @@
     <div id="tab-compare" class="tab-content">
       <div class="stats-box" style="margin-top:0;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
-          <span style="font-weight: bold; font-size: 0.92rem;">⚔️ 対人戦績 (1vs1 持ち点差)</span>
+          <span style="font-weight: bold; font-size: 0.92rem;">📈 Pt推移の比較</span>
+          <button class="btn btn-sm btn-secondary" onclick="openCompareMemberModal()">👥 メンバー選択</button>
+        </div>
+        <div style="margin-top: 8px; height: 220px; position: relative;">
+          <canvas id="compareTrendChart"></canvas>
+        </div>
+        <div style="font-size:0.61rem; color:#64748b; margin-top:4px;">● = 対局した日　／　点のない区間 = 不参加（Ptは前回から据え置き）</div>
+      </div>
+
+      <div class="stats-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+          <span style="font-weight: bold; font-size: 0.92rem;">🕸 能力レーダー</span>
+          <button class="btn btn-sm btn-secondary" onclick="openCompareMemberModal()">👥 メンバー選択</button>
+        </div>
+        <div style="margin-top: 6px; height: 280px; position: relative;">
+          <canvas id="compareRadarChart"></canvas>
+        </div>
+        <div style="font-size:0.61rem; color:#64748b; margin-top:4px;">期間内に対局した全員の中での偏差値（50 = 平均）。安定度 = Ptのばらつき(SD)の小ささ。メンバー選択はPt推移と共通です。</div>
+      </div>
+
+      <div class="stats-box">
+        <div style="font-weight: bold; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">🧩 相性表（先着率）</div>
+        <div style="font-size:0.61rem; color:#64748b; margin:4px 0;">行の人が列の人に先着した割合。緑 = 得意、赤 = 苦手。行の名前をタップすると下の対戦分析に切り替わります。</div>
+        <div id="compare-heatmap" style="overflow-x:auto;"></div>
+      </div>
+
+      <div class="stats-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+          <span style="font-weight: bold; font-size: 0.92rem;">⚔️ 対戦分析</span>
           <select id="compare-member-select" onchange="renderCompare()" class="period-select"></select>
         </div>
-        <div id="stats-vs-list" style="font-size: 0.77rem; background: #f8fafc; border-radius: 5px; padding: 6px; margin-top: 8px;"></div>
+        <div style="font-weight:bold; font-size:0.83rem; margin-top:8px;">直接対決</div>
+        <div style="font-size:0.61rem; color:#64748b; margin-top:2px;">先着 = 同じ半荘で相手より上の着順だった回数（同着は引分）</div>
+        <div id="stats-vs-list" style="font-size: 0.77rem; background: #f8fafc; border-radius: 5px; padding: 6px; margin-top: 4px;"></div>
+
+        <div style="font-weight:bold; font-size:0.83rem; margin-top:10px;">同卓メンバー別の成績</div>
+        <div style="font-size:0.61rem; color:#64748b; margin-top:2px;">その人が同じ卓にいた半荘／いなかった半荘での、自分の平均Pt・平均着順</div>
+        <div id="compare-combo-list" style="background: #f8fafc; border-radius: 5px; padding: 6px; margin-top: 4px;"></div>
       </div>
     </div>
 
@@ -398,6 +454,21 @@
         <span onclick="closeModal('addSessionMemberModal')" style="cursor:pointer; font-weight:bold;">✕</span>
       </div>
       <div id="sessionMemberSelectList" style="max-height:240px; overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="compareMemberModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span style="font-weight:bold; font-size:0.94rem;">👥 グラフに表示するメンバー</span>
+        <span onclick="closeModal('compareMemberModal')" style="cursor:pointer; font-weight:bold;">✕</span>
+      </div>
+      <div style="display:flex; gap:6px; margin-bottom:6px;">
+        <button class="btn btn-sm btn-secondary" onclick="setAllCompareMembers(true)">全員</button>
+        <button class="btn btn-sm btn-secondary" onclick="setAllCompareMembers(false)">全解除</button>
+      </div>
+      <div id="compare-member-checklist"></div>
+      <button class="btn" style="width:100%; margin-top:10px;" onclick="applyCompareMembers()">表示する</button>
     </div>
   </div>
 
@@ -1429,6 +1500,7 @@
           topRawList: [],  
           tobiCount: 0,
           ptList: [],
+          gameLog: [],
           dailyTrend: {}      
         };
       });
@@ -1461,6 +1533,11 @@
             st.gamesCount += 1;
             st.rawList.push(mRawScore);
             st.ptList.push(r.totalPt);
+            st.gameLog.push({
+              date: pDate, sid: g.session_id, gno: g.game_number,
+              pt: r.totalPt, rank: r.rank, raw: mRawScore,
+              opps: active.map(a => a.id).filter(id => id !== mId)
+            });
 
             if (!dailyMemberPt[pDate][mId]) dailyMemberPt[pDate][mId] = 0;
             dailyMemberPt[pDate][mId] += r.totalPt;
@@ -1473,14 +1550,23 @@
               const oppId = active.find(a => a.idx === oppRes.idx).id;
               const oppRawScore = active.find(a => a.idx === oppRes.idx).raw; 
               if (mId !== oppId) {
-                if (!st.vs[oppId]) st.vs[oppId] = { diffRaw: 0, count: 0 };
+                if (!st.vs[oppId]) st.vs[oppId] = { diffRaw: 0, count: 0, win: 0, lose: 0, draw: 0, diffPt: 0 };
                 st.vs[oppId].diffRaw += (mRawScore - oppRawScore); 
                 st.vs[oppId].count += 1;
+                st.vs[oppId].diffPt += (r.totalPt - oppRes.totalPt);
+                if (r.rank < oppRes.rank) st.vs[oppId].win += 1;
+                else if (r.rank > oppRes.rank) st.vs[oppId].lose += 1;
+                else st.vs[oppId].draw += 1;
               }
             });
           });
         }
       });
+
+      // 半荘ログを時系列順（対局日 → 半荘番号）に並べる
+      Object.values(memberStats).forEach(st => st.gameLog.sort((a, b) =>
+        a.date !== b.date ? (a.date < b.date ? -1 : 1) :
+        a.sid !== b.sid ? (a.sid < b.sid ? -1 : 1) : a.gno - b.gno));
 
       const activeDates = filteredSessions.map(s => s.play_date);
       allMembers.forEach(m => {
@@ -1629,10 +1715,46 @@
       }
     }
 
+    // 半荘ログの一部（直近N戦など）から個人スタッツを計算
+    function summarizeLogs(logs) {
+      const gc = logs.length;
+      const o = { gamesCount: gc, ranks: [0,0,0,0], totalPt: 0, rawList: [], ptList: [], topRawList: [], tobiCount: 0 };
+      logs.forEach(l => {
+        o.ranks[l.rank - 1] += 1;
+        o.totalPt += l.pt;
+        o.rawList.push(l.raw);
+        o.ptList.push(l.pt);
+        if (l.rank === 1) o.topRawList.push(l.raw);
+        if (l.raw < 0) o.tobiCount += 1;
+      });
+      o.avgRank = (o.ranks[0] + o.ranks[1]*2 + o.ranks[2]*3 + o.ranks[3]*4) / gc;
+      o.topRate = o.ranks[0] / gc * 100;
+      o.rentaiRate = (o.ranks[0] + o.ranks[1]) / gc * 100;
+      o.avoidLastRate = (gc - o.ranks[3]) / gc * 100;
+      o.avgRaw = Math.round(o.rawList.reduce((a,b)=>a+b,0) / gc);
+      o.topAvgRaw = o.ranks[0] > 0 ? Math.round(o.topRawList.reduce((a,b)=>a+b,0) / o.ranks[0]) : 0;
+      o.avgPt = o.totalPt / gc;
+      o.tobiRate = o.tobiCount / gc * 100;
+      return o;
+    }
+
+    function deltaHtml(cur, base, digits, lowerBetter) {
+      const d = cur - base;
+      if (Math.abs(d) < Math.pow(10, -digits) / 2) return '<span class="delta-flat">±0</span>';
+      const good = lowerBetter ? d < 0 : d > 0;
+      return `<span class="${good ? 'delta-up' : 'delta-down'}">${d > 0 ? '▲' : '▼'}${Math.abs(d).toFixed(digits)}</span>`;
+    }
+
     function renderStatsDetail() {
       const mId = document.getElementById('stats-member-select').value;
       if (!mId || !window.cachedStats) return;
-      const st = window.cachedStats[mId];
+      const baseSt = window.cachedStats[mId];
+      const recentMode = document.getElementById('stats-recent-check').checked && baseSt && baseSt.gamesCount > 0;
+      const recentN = recentMode ? Math.min(10, baseSt.gameLog.length) : 0;
+      const st = recentMode ? { ...baseSt, ...summarizeLogs(baseSt.gameLog.slice(-10)) } : baseSt;
+      const note = document.getElementById('stats-recent-note');
+      note.style.display = recentMode ? 'block' : 'none';
+      note.innerText = recentMode ? `直近${recentN}戦の成績を表示中（▲▼ = 期間内の通算との差、緑が良化）` : '';
 
       if (!st || st.gamesCount === 0) {
         document.getElementById('stat-avg-rank').innerText = '- 位';
@@ -1684,53 +1806,298 @@
       avgPtEl.innerText = `${st.avgPt >= 0 ? '+' : ''}${st.avgPt.toFixed(2)} P`;
       avgPtEl.className = st.avgPt >= 0 ? 'pt-plus' : 'pt-minus';
       document.getElementById('stat-sd-pt').innerText = `SD: ${calculateSD(st.ptList, st.avgPt).toFixed(1)} P`;
-      document.getElementById('stat-total-pt').innerText = `通算: ${st.totalPt >= 0 ? '+' : ''}${st.totalPt.toFixed(1)} P`;
+      document.getElementById('stat-total-pt').innerText = `${recentMode ? `直近${recentN}戦計` : '通算'}: ${st.totalPt >= 0 ? '+' : ''}${st.totalPt.toFixed(1)} P`;
       document.getElementById('stat-tobi-rate').innerText = `${st.tobiRate.toFixed(1)} %`;
       document.getElementById('stat-tobi-count').innerText = `${st.tobiCount}回 / ${st.gamesCount}局`;
 
-      renderTrendChart(st);
+      if (recentMode) {
+        const b = baseSt;
+        const add = (id, html) => { document.getElementById(id).innerHTML += html; };
+        add('stat-avg-rank', deltaHtml(st.avgRank, b.avgRank, 2, true));
+        add('stat-top-rate', deltaHtml(st.topRate, b.topRate, 1));
+        add('stat-rentai-rate', deltaHtml(st.rentaiRate, b.rentaiRate, 1));
+        add('stat-avoid-last-rate', deltaHtml(st.avoidLastRate, b.avoidLastRate, 1));
+        add('stat-avg-score', deltaHtml(st.avgRaw, b.avgRaw, 0));
+        if (st.ranks[0] > 0 && b.ranks[0] > 0) add('stat-top-avg-score', deltaHtml(st.topAvgRaw, b.topAvgRaw, 0));
+        add('stat-avg-pt', deltaHtml(st.avgPt, b.avgPt, 2));
+        add('stat-tobi-rate', deltaHtml(st.tobiRate, b.tobiRate, 1, true));
+      }
+
+      renderTrendChart(baseSt);
+    }
+
+    // ===== 比較タブ =====
+    const COMPARE_COLORS = ['#0072B2', '#D55E00', '#009E73', '#CC79A7', '#E69F00', '#56B4E9', '#7B3F9E', '#4A4A4A', '#B8860B', '#C0392B'];
+    const COMPARE_DASHES = [[], [], [], [], [], [6, 3], [6, 3], [2, 2], [2, 2], [8, 3, 2, 3]];
+    let compareChart = null;
+    let compareSelected = null; // null = 未設定（初回は自動選択）
+
+    function compareColorOf(mId) {
+      const i = allMembers.findIndex(m => m.id === mId);
+      return { color: COMPARE_COLORS[i % COMPARE_COLORS.length], dash: COMPARE_DASHES[i % COMPARE_DASHES.length] };
+    }
+
+    function openCompareMemberModal() {
+      const box = document.getElementById('compare-member-checklist');
+      const stats = window.cachedStats || {};
+      box.innerHTML = allMembers.map(m => {
+        const c = compareColorOf(m.id);
+        const gc = stats[m.id]?.gamesCount || 0;
+        const checked = compareSelected && compareSelected.includes(m.id) ? 'checked' : '';
+        return `<label class="cmp-check-row">
+            <input type="checkbox" value="${m.id}" ${checked}>
+            <span class="cmp-swatch" style="background:${c.color};"></span>
+            ${renderAvatarHtml(m, 'avatar-sm')}
+            <span style="flex-grow:1;">${m.name}</span>
+            <span style="font-size:0.7rem; color:#64748b;">${gc}局</span>
+          </label>`;
+      }).join('');
+      document.getElementById('compareMemberModal').classList.add('active');
+    }
+
+    function setAllCompareMembers(on) {
+      document.querySelectorAll('#compare-member-checklist input').forEach(el => el.checked = on);
+    }
+
+    function applyCompareMembers() {
+      compareSelected = [...document.querySelectorAll('#compare-member-checklist input:checked')].map(el => el.value);
+      closeModal('compareMemberModal');
+      renderCompareChart();
+      renderRadarChart();
+    }
+
+    function renderCompareChart() {
+      const stats = window.cachedStats;
+      if (!stats) return;
+      const dates = window.cachedDates || [];
+
+      if (compareSelected === null) {
+        // 初回: 期間内に対局した人を通算Pt順に最大4人
+        compareSelected = Object.values(stats).filter(st => st.gamesCount > 0)
+          .sort((a, b) => b.totalPt - a.totalPt).slice(0, 4).map(st => st.id);
+      }
+
+      const datasets = compareSelected.filter(id => stats[id]).map(id => {
+        const st = stats[id];
+        const c = compareColorOf(id);
+        let last = null;
+        const data = [], radius = [];
+        dates.forEach(d => {
+          if (st.dailyTrend[d] !== undefined) { last = st.dailyTrend[d]; data.push(last); radius.push(3); }
+          else { data.push(last); radius.push(0); } // 不参加日は前回値を据え置き（初参加前はnull）
+        });
+        return {
+          label: st.name, data, pointRadius: radius, pointHoverRadius: radius.map(r => r ? 5 : 0),
+          borderColor: c.color, backgroundColor: c.color, pointBackgroundColor: c.color,
+          borderDash: c.dash, borderWidth: 2, fill: false, tension: 0, spanGaps: false
+        };
+      });
+
+      const ctx = document.getElementById('compareTrendChart').getContext('2d');
+      if (compareChart) compareChart.destroy();
+      compareChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: dates, datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'bottom', labels: { boxWidth: 18, boxHeight: 2, font: { size: 10 } } },
+            tooltip: {
+              filter: item => item.parsed.y !== null && item.raw !== null,
+              itemSort: (a, b) => b.parsed.y - a.parsed.y,
+              callbacks: {
+                label: (c) => {
+                  const played = c.dataset.pointRadius[c.dataIndex] > 0;
+                  return ` ${c.dataset.label}: ${c.parsed.y >= 0 ? '+' : ''}${c.parsed.y.toFixed(1)} P${played ? '' : '（不参加）'}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 8 }, maxRotation: 45, minRotation: 45 } },
+            y: { grid: { color: (c) => c.tick.value === 0 ? '#94a3b8' : '#e2e8f0' }, ticks: { font: { size: 9 } } }
+          }
+        }
+      });
+    }
+
+    let radarChart = null;
+    function hexA(hex, a) { return hex + Math.round(a * 255).toString(16).padStart(2, '0'); }
+
+    function renderRadarChart() {
+      const stats = window.cachedStats;
+      if (!stats || !compareSelected) return;
+      const pool = Object.values(stats).filter(st => st.gamesCount > 0);
+      const AXES = [
+        ['平均Pt', st => st.avgPt, st => `${st.avgPt >= 0 ? '+' : ''}${st.avgPt.toFixed(2)}P`],
+        ['トップ率', st => st.topRate, st => `${st.topRate.toFixed(1)}%`],
+        ['連対率', st => st.rentaiRate, st => `${st.rentaiRate.toFixed(1)}%`],
+        ['ラス回避率', st => st.avoidLastRate, st => `${st.avoidLastRate.toFixed(1)}%`],
+        ['安定度', st => -calculateSD(st.ptList, st.avgPt), st => `SD ${calculateSD(st.ptList, st.avgPt).toFixed(1)}P`],
+        ['飛び回避', st => -st.tobiRate, st => `飛び率 ${st.tobiRate.toFixed(1)}%`],
+      ];
+      // 各軸の偏差値（期間内に対局した全員が母集団）
+      const scoreOf = AXES.map(([, f]) => {
+        const xs = pool.map(f);
+        const mean = xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
+        const sd = calculateSD(xs, mean);
+        return st => sd > 0 ? Math.max(20, Math.min(80, 50 + 10 * (f(st) - mean) / sd)) : 50;
+      });
+
+      const datasets = compareSelected.filter(id => stats[id] && stats[id].gamesCount > 0).map(id => {
+        const st = stats[id], c = compareColorOf(id);
+        return {
+          label: st.name,
+          data: AXES.map((_, i) => Math.round(scoreOf[i](st) * 10) / 10),
+          realText: AXES.map(([, , txt]) => txt(st)),
+          borderColor: c.color, backgroundColor: hexA(c.color, 0.10), pointBackgroundColor: c.color,
+          borderDash: c.dash, borderWidth: 2, pointRadius: 2.5
+        };
+      });
+
+      const ctx = document.getElementById('compareRadarChart').getContext('2d');
+      if (radarChart) radarChart.destroy();
+      radarChart = new Chart(ctx, {
+        type: 'radar',
+        data: { labels: AXES.map(a => a[0]), datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: { r: { min: 20, max: 80, ticks: { stepSize: 10, display: false }, pointLabels: { font: { size: 10, weight: 'bold' } },
+                         grid: { color: (c) => c.tick.value === 50 ? '#94a3b8' : '#e2e8f0' } } },
+          plugins: {
+            legend: { display: true, position: 'bottom', labels: { boxWidth: 18, boxHeight: 2, font: { size: 10 } } },
+            tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: 偏差値${c.raw.toFixed(1)}（${c.dataset.realText[c.dataIndex]}）` } }
+          }
+        }
+      });
+    }
+
+    function renderHeatmap() {
+      const stats = window.cachedStats;
+      const box = document.getElementById('compare-heatmap');
+      if (!stats) return;
+      const players = allMembers.filter(m => stats[m.id] && stats[m.id].gamesCount > 0);
+      if (players.length < 2) { box.innerHTML = '<span style="font-size:0.75rem; color:#64748b;">対戦データがありません</span>'; return; }
+
+      const cellColor = rate => {
+        const t = Math.min(1, Math.abs(rate - 50) / 30); // ±30%で最大濃度
+        return rate >= 50 ? `rgba(34,197,94,${0.12 + 0.6 * t})` : `rgba(239,68,68,${0.12 + 0.6 * t})`;
+      };
+      let html = '<table class="heat-table"><thead><tr><th style="background:#fff;">↓自分 / 相手→</th>';
+      players.forEach(p => html += `<th>${p.name}</th>`);
+      html += '</tr></thead><tbody>';
+      players.forEach(me => {
+        html += `<tr><th style="cursor:pointer; text-decoration:underline dotted;" onclick="selectCompareMember('${me.id}')">${me.name}</th>`;
+        players.forEach(opp => {
+          if (me.id === opp.id) { html += '<td class="heat-self">-</td>'; return; }
+          const v = stats[me.id].vs[opp.id];
+          if (!v || (v.win + v.lose) === 0) { html += '<td style="color:#94a3b8;">-</td>'; return; }
+          const rate = v.win / (v.win + v.lose) * 100;
+          html += `<td style="background:${cellColor(rate)};" title="${v.win}勝${v.lose}敗${v.draw ? v.draw + '分' : ''}（${v.count}局）">
+                     <div style="font-weight:bold;">${rate.toFixed(0)}%</div>
+                     <div style="font-size:0.55rem; color:#475569;">${v.count}局</div></td>`;
+        });
+        html += '</tr>';
+      });
+      box.innerHTML = html + '</tbody></table>';
+    }
+
+    function selectCompareMember(mId) {
+      document.getElementById('compare-member-select').value = mId;
+      renderCompare();
+      document.getElementById('stats-vs-list').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function renderComboList(st) {
+      const box = document.getElementById('compare-combo-list');
+      const logs = st.gameLog || [];
+      const others = allMembers.filter(m => m.id !== st.id);
+      const rows = others.map(m => {
+        const withX = logs.filter(l => l.opps.includes(m.id));
+        const without = logs.filter(l => !l.opps.includes(m.id));
+        const avg = (arr, f) => arr.length ? arr.reduce((a, l) => a + f(l), 0) / arr.length : null;
+        return { m, nW: withX.length, ptW: avg(withX, l => l.pt), rkW: avg(withX, l => l.rank),
+                 nO: without.length, ptO: avg(without, l => l.pt), rkO: avg(without, l => l.rank) };
+      }).filter(r => r.nW > 0).sort((a, b) => b.ptW - a.ptW);
+
+      if (rows.length === 0) { box.innerHTML = '<span style="font-size:0.75rem; color:#64748b;">対戦データがありません</span>'; return; }
+      const ptS = v => v === null ? '-' : `${v >= 0 ? '+' : ''}${v.toFixed(1)}P`;
+      box.innerHTML = rows.map(r => {
+        const cls = r.ptW >= 0 ? 'pt-plus' : 'pt-minus';
+        const diff = r.ptO === null ? '' : deltaHtml(r.ptW, r.ptO, 1);
+        return `<div class="combo-row">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:4px;">${renderAvatarHtml(r.m, 'avatar-sm')}<b>${r.m.name}</b> と同卓</div>
+              <div><span class="${cls}">${ptS(r.ptW)}/局</span>${diff}<span style="font-size:0.66rem; color:#4a5568; margin-left:4px;">${r.rkW.toFixed(2)}位 (${r.nW}局)</span></div>
+            </div>
+            <div style="text-align:right; font-size:0.63rem; color:#64748b;">いない時: ${ptS(r.ptO)}/局${r.rkO !== null ? `・${r.rkO.toFixed(2)}位` : ''} (${r.nO}局)</div>
+          </div>`;
+      }).join('') + '<div style="font-size:0.6rem; color:#94a3b8; margin-top:3px;">▲▼ = いない時との差</div>';
     }
 
     function renderCompare() {
+      renderCompareChart();
+      renderRadarChart();
+      renderHeatmap();
+
       const mId = document.getElementById('compare-member-select').value;
+      const vsList = document.getElementById('stats-vs-list');
       if (!mId || !window.cachedStats) return;
       const st = window.cachedStats[mId];
       if (!st || st.gamesCount === 0) {
-        document.getElementById('stats-vs-list').innerHTML = '<span style="color:#64748b;">選択期間内の対局データがありません</span>';
+        vsList.innerHTML = '<span style="color:#64748b;">選択期間内の対局データがありません</span>';
+        document.getElementById('compare-combo-list').innerHTML = '<span style="font-size:0.75rem; color:#64748b;">選択期間内の対局データがありません</span>';
         return;
       }
+      renderComboList(st);
 
-      const vsList = document.getElementById('stats-vs-list');
-      vsList.innerHTML = '';
       const oppKeys = Object.keys(st.vs);
       if (oppKeys.length === 0) {
         vsList.innerHTML = '<span style="color:#64748b;">対戦データがありません</span>';
-      } else {
-        oppKeys.forEach(oppId => {
-          const oppMember = allMembers.find(m => m.id === oppId);
-          const oppName = oppMember?.name || '不明';
-          const v = st.vs[oppId];
-          const avgOppRawDiff = v.count > 0 ? Math.round(v.diffRaw / v.count) : 0;
-          const rawClass = v.diffRaw >= 0 ? 'pt-plus' : 'pt-minus';
-          const rawSign = v.diffRaw >= 0 ? '+' : '';
-          const avgSignStr = avgOppRawDiff >= 0 ? '+' : '';
+        return;
+      }
 
-          vsList.innerHTML += `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; border-bottom:1px dashed #e2e8f0; padding-bottom:3px;">
+      const rateOf = v => (v.win + v.lose) > 0 ? v.win / (v.win + v.lose) * 100 : 50;
+      oppKeys.sort((a, b) => rateOf(st.vs[b]) - rateOf(st.vs[a]));
+
+      vsList.innerHTML = oppKeys.map(oppId => {
+        const oppMember = allMembers.find(m => m.id === oppId);
+        const oppName = oppMember?.name || '不明';
+        const v = st.vs[oppId];
+        const rate = rateOf(v);
+        const rateClass = rate >= 50 ? 'pt-plus' : 'pt-minus';
+        const avgRaw = v.count > 0 ? Math.round(v.diffRaw / v.count) : 0;
+        const avgPt = v.count > 0 ? v.diffPt / v.count : 0;
+        const sgn = x => x >= 0 ? '+' : '';
+        const winW = v.count > 0 ? v.win / v.count * 100 : 0;
+        const drawW = v.count > 0 ? v.draw / v.count * 100 : 0;
+        return `
+          <div style="margin-bottom:6px; border-bottom:1px dashed #e2e8f0; padding-bottom:5px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
               <div style="display:flex; align-items:center; gap:4px;">
+                ${renderAvatarHtml(oppMember, 'avatar-sm')}
                 <span style="font-weight:bold;">vs ${oppName}</span>
                 <span style="font-size:0.66rem; color:#64748b;">(${v.count}局)</span>
               </div>
               <div style="text-align:right;">
-                <div class="${rawClass}" style="font-size:0.81rem;">計 ${rawSign}${v.diffRaw.toLocaleString()} 点</div>
-                <div style="font-size:0.63rem; color:#64748b;">平均 ${avgSignStr}${avgOppRawDiff.toLocaleString()} 点/局</div>
+                <span class="${rateClass}" style="font-size:0.86rem;">先着率 ${rate.toFixed(1)}%</span>
+                <div style="font-size:0.66rem; color:#4a5568;">${v.win}勝 ${v.lose}敗${v.draw ? ` ${v.draw}分` : ''}</div>
               </div>
-            </div>`;
-        });
-      }
-
+            </div>
+            <div style="display:flex; height:5px; border-radius:3px; overflow:hidden; margin:3px 0; background:#fecaca;">
+              <div style="width:${winW}%; background:#86efac;"></div>
+              <div style="width:${drawW}%; background:#e2e8f0;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.63rem; color:#64748b;">
+              <span>Pt差 平均 ${sgn(avgPt)}${avgPt.toFixed(1)} P/局</span>
+              <span>素点差 計 ${sgn(v.diffRaw)}${v.diffRaw.toLocaleString()}点（平均 ${sgn(avgRaw)}${avgRaw.toLocaleString()}点/局）</span>
+            </div>
+          </div>`;
+      }).join('');
     }
 
+    // ===== 記録タブ =====
     function renderRecords() {
       const listEl = document.getElementById('records-list');
       const nameOf = id => allMembers.find(m => m.id === id)?.name || '不明';
@@ -1747,15 +2114,25 @@
           return a.game_number - b.game_number;
         });
 
+      // 連続記録の種類: 条件(着順) → 成立
+      const STREAKS = {
+        top: r => r === 1,          // 連続トップ
+        rentai: r => r <= 2,        // 連続連対
+        avoid: r => r <= 3,         // 連続ラス回避
+        last: r => r === 4,         // 連続ラス
+        gyaku: r => r >= 3,         // 連続逆連対 (3・4着)
+        noTop: r => r !== 1         // トップなし
+      };
+
       const daily = {};      // `${date}|${mId}` -> Pt
       const gameCount = {};  // mId -> 局数
-      const streak = {};     // mId -> {top, rentai, avoid, maxTop, maxRentai, maxAvoid}
+      const tobiCount = {};  // mId -> 飛び回数
+      const cur = {}, best = {}; // mId -> {種類: 連続数}
       let rawHigh = null, rawLow = null, topGap = null;
-      const better = (cur, val, higher) => cur === null || (higher ? val > cur.val : val < cur.val);
-      const update = (cur, val, holder, higher) => {
-        if (better(cur, val, higher)) return { val, holders: [holder] };
-        if (cur.val === val && !cur.holders.includes(holder)) cur.holders.push(holder);
-        return cur;
+      const update = (rec, val, holder, higher) => {
+        if (rec === null || (higher ? val > rec.val : val < rec.val)) return { val, holders: [holder] };
+        if (rec.val === val && !rec.holders.includes(holder)) rec.holders.push(holder);
+        return rec;
       };
 
       games.forEach(g => {
@@ -1774,14 +2151,14 @@
           rawLow = update(rawLow, r.raw, mId, false);
           daily[`${date}|${mId}`] = (daily[`${date}|${mId}`] || 0) + r.totalPt;
           gameCount[mId] = (gameCount[mId] || 0) + 1;
+          tobiCount[mId] = (tobiCount[mId] || 0) + (r.raw < 0 ? 1 : 0);
 
-          const sk = streak[mId] || (streak[mId] = { top: 0, rentai: 0, avoid: 0, maxTop: 0, maxRentai: 0, maxAvoid: 0 });
-          sk.top = r.rank === 1 ? sk.top + 1 : 0;
-          sk.rentai = r.rank <= 2 ? sk.rentai + 1 : 0;
-          sk.avoid = r.rank <= 3 ? sk.avoid + 1 : 0;
-          sk.maxTop = Math.max(sk.maxTop, sk.top);
-          sk.maxRentai = Math.max(sk.maxRentai, sk.rentai);
-          sk.maxAvoid = Math.max(sk.maxAvoid, sk.avoid);
+          const c = cur[mId] || (cur[mId] = {});
+          const b = best[mId] || (best[mId] = {});
+          Object.entries(STREAKS).forEach(([k, cond]) => {
+            c[k] = cond(r.rank) ? (c[k] || 0) + 1 : 0;
+            b[k] = Math.max(b[k] || 0, c[k]);
+          });
         });
 
         // 最大トップ差（1位と2位の素点差）
@@ -1793,7 +2170,7 @@
         }
       });
 
-      if (games.length === 0 || Object.keys(gameCount).length === 0) {
+      if (Object.keys(gameCount).length === 0) {
         listEl.innerHTML = '<p style="font-size:0.8rem; color:#64748b; padding:8px 0;">選択期間内の対局データがありません</p>';
         return;
       }
@@ -1807,30 +2184,59 @@
       });
 
       const maxOf = (obj, key) => {
-        let cur = null;
-        Object.entries(obj).forEach(([mId, o]) => { const v = key ? o[key] : o; cur = update(cur, v, mId, true); });
-        return cur;
+        let rec = null;
+        Object.entries(obj).forEach(([mId, o]) => { rec = update(rec, key ? (o[key] || 0) : o, mId, true); });
+        return rec;
       };
 
       const ptStr = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}P`;
-      const rows = [
+      const ren = v => `${v}連続`;
+      const empty = '<span style="color:#94a3b8; font-weight:normal;">-</span>';
+      const rowHtml = (label, holderHtml) =>
+        `<div class="record-row"><span class="record-label">${label}</span><span class="record-holder">${holderHtml}</span></div>`;
+      // minVal: この値未満なら記録なし扱い
+      const recRow = ([label, rec, fmt, minVal]) => {
+        const ok = rec && (minVal === undefined || rec.val >= minVal);
+        return rowHtml(label, ok ? `${rec.holders.map(nameOf).join('、')}<span class="record-val">(${fmt(rec.val)})</span>` : empty);
+      };
+
+      const glory = [
         ['最高持ち点', rawHigh, v => `${v.toLocaleString()}点`],
-        ['最低持ち点', rawLow, v => `${v.toLocaleString()}点`],
         ['最大トップ差', topGap, v => `2着と${v.toLocaleString()}点差`],
         ['1日最大勝ち', dayWin, ptStr],
-        ['1日最大負け', dayLose, ptStr],
-        ['最長連続トップ', maxOf(streak, 'maxTop'), v => `${v}連続`],
-        ['最長連続連対', maxOf(streak, 'maxRentai'), v => `${v}連続`],
-        ['最長連続ラス回避', maxOf(streak, 'maxAvoid'), v => `${v}連続`],
+        ['最長連続トップ', maxOf(best, 'top'), ren, 1],
+        ['最長連続連対', maxOf(best, 'rentai'), ren, 1],
+        ['最長連続ラス回避', maxOf(best, 'avoid'), ren, 1],
         ['最多対局数', maxOf(gameCount), v => `${v}局`],
       ];
+      const shame = [
+        ['最低持ち点', rawLow, v => `${v.toLocaleString()}点`],
+        ['1日最大負け', dayLose, ptStr],
+        ['最長連続ラス', maxOf(best, 'last'), ren, 1],
+        ['最長連続逆連対', maxOf(best, 'gyaku'), ren, 1],
+        ['最長トップなし', maxOf(best, 'noTop'), v => `${v}局連続`, 1],
+        ['最多飛び', maxOf(tobiCount), v => `${v}回`, 1],
+      ];
 
-      listEl.innerHTML = rows.map(([label, rec, fmt]) => {
-        const holder = (!rec || (rec.val === 0 && label.includes('連続')))
-          ? '<span style="color:#94a3b8; font-weight:normal;">-</span>'
-          : `${rec.holders.map(nameOf).join('、')}<span class="record-val">(${fmt(rec.val)})</span>`;
-        return `<div class="record-row"><span class="record-label">${label}</span><span class="record-holder">${holder}</span></div>`;
-      }).join('');
+      // リアルタイム記録: 期間内の最新の半荘時点で継続中の連続記録（2連続以上）
+      const live = [
+        ['🔥 連続トップ中', 'top', ''],
+        ['🔥 連続連対中', 'rentai', ''],
+        ['🔥 連続ラス回避中', 'avoid', ''],
+        ['🥶 連続ラス中', 'last', ''],
+        ['🥶 連続逆連対中', 'gyaku', ''],
+        ['🥶 トップなし継続中', 'noTop', '局'],
+      ].map(([label, k, unit]) => {
+        const list = Object.entries(cur).filter(([, c]) => (c[k] || 0) >= 2).sort((a, b) => b[1][k] - a[1][k]);
+        const html = list.length === 0 ? empty
+          : list.map(([mId, c]) => `${nameOf(mId)}<span class="record-val">(${c[k]}${unit}連続)</span>`).join('、');
+        return rowHtml(label, html);
+      });
+
+      listEl.innerHTML =
+        `<div class="record-section">⏱ リアルタイム記録<span class="record-sub">継続中の連続記録（2連続以上）</span></div>` + live.join('') +
+        `<div class="record-section">🏆 栄光の記録</div>` + glory.map(recRow).join('') +
+        `<div class="record-section">💀 不名誉な記録</div>` + shame.map(recRow).join('');
     }
 
     function renderTrendChart(st) {
