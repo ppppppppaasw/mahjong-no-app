@@ -89,6 +89,13 @@
     th { background: #dbe4d8; vertical-align: middle; }
     .score-cell { cursor: pointer; height: 48px; vertical-align: middle; line-height: 1.15; }
 
+    /* 記録 */
+    .record-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px dashed #e2e8f0; font-size: 0.8rem; }
+    .record-row:last-child { border-bottom: none; }
+    .record-label { color: #4a5568; font-weight: bold; white-space: nowrap; }
+    .record-holder { text-align: right; font-weight: bold; }
+    .record-val { font-size: 0.71rem; font-weight: normal; color: #64748b; margin-left: 2px; }
+
     /* 戦績 */
     .rank-item { background: white; border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background-color 0.2s; }
     .rank-item:active { background-color: #e2e8f0; }
@@ -257,12 +264,14 @@
         <span style="font-size: 0.83rem; font-weight: bold; color: #4a5568;">ランキング表示</span>
         <select id="stats-sort-select" class="period-select" onchange="renderStatsRankList()">
           <option value="totalPt">通算Pt (高い順)</option>
+          <option value="avgPt">平均Pt/局 (高い順)</option>
           <option value="avgRank">平均順位 (良い順)</option>
           <option value="topRate">トップ率 (高い順)</option>
           <option value="rentaiRate">連対率 (高い順)</option>
           <option value="avoidLastRate">ラス回避率 (高い順)</option>
           <option value="avgRaw">平均持ち点 (高い順)</option>
           <option value="topAvgRaw">トップ時平均持ち点 (高い順)</option>
+          <option value="tobiRate">飛び率 (低い順)</option>
         </select>
       </div>
 
@@ -308,10 +317,40 @@
             <div id="stat-top-avg-score" style="font-size:0.87rem; font-weight:bold;">-</div>
             <div id="stat-top-sd-score" style="font-size:0.61rem; color:#64748b;">CV: -</div>
           </div>
+
+          <div class="stat-card">
+            <div style="font-size:0.66rem; color:#64748b;">平均Pt/局</div>
+            <div id="stat-avg-pt" style="font-size:0.92rem; font-weight:bold;">-</div>
+            <div id="stat-sd-pt" style="font-size:0.61rem; color:#64748b;">SD: -</div>
+            <div id="stat-total-pt" style="font-size:0.59rem; color:#64748b; margin-top:1px;">通算: -</div>
+          </div>
+
+          <div class="stat-card">
+            <div style="font-size:0.66rem; color:#64748b;">飛び率</div>
+            <div id="stat-tobi-rate" style="font-size:0.92rem; font-weight:bold;">- %</div>
+            <div id="stat-tobi-count" style="font-size:0.61rem; color:#64748b;">-</div>
+          </div>
         </div>
 
-        <div style="font-weight: bold; font-size: 0.83rem; margin-top: 10px; margin-bottom: 4px;">対人戦績 (1vs1 持ち点差)</div>
-        <div id="stats-vs-list" style="font-size: 0.77rem; background: #f8fafc; border-radius: 5px; padding: 6px;"></div>
+      </div>
+    </div>
+
+    <!-- 5. 記録画面 -->
+    <div id="tab-records" class="tab-content">
+      <div class="stats-box" style="margin-top:0;">
+        <div style="font-weight: bold; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">🏆 期間内の記録</div>
+        <div id="records-list"></div>
+      </div>
+    </div>
+
+    <!-- 4. 比較画面 -->
+    <div id="tab-compare" class="tab-content">
+      <div class="stats-box" style="margin-top:0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+          <span style="font-weight: bold; font-size: 0.92rem;">⚔️ 対人戦績 (1vs1 持ち点差)</span>
+          <select id="compare-member-select" onchange="renderCompare()" class="period-select"></select>
+        </div>
+        <div id="stats-vs-list" style="font-size: 0.77rem; background: #f8fafc; border-radius: 5px; padding: 6px; margin-top: 8px;"></div>
       </div>
     </div>
 
@@ -325,6 +364,14 @@
     <button class="nav-item" onclick="switchTab('stats')">
       <span style="font-size:1.14rem;">📊</span>
       <span>戦績・統計</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('compare')">
+      <span style="font-size:1.14rem;">⚔️</span>
+      <span>比較</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('records')">
+      <span style="font-size:1.14rem;">🏆</span>
+      <span>記録</span>
     </button>
   </nav>
 
@@ -549,7 +596,7 @@
             await fetchAllData();
             if (activeTabName === 'main') renderMain();
             if (activeTabName === 'detail') loadDetailSession(currentSessionId);
-            if (activeTabName === 'stats') renderStats();
+            if (['stats', 'compare', 'records'].includes(activeTabName)) renderStats();
           }
         )
         .subscribe();
@@ -670,6 +717,7 @@
           results.push({
             idx: m.idx,
             raw: m.raw,
+            rank: i + 1, // 同点は上位の着順で統一（例: 2位と3位が同点 → 両者2位）
             rawPt: rawPt,
             rankPt: avgRankPt,
             totalPt: rawPt + avgRankPt
@@ -708,6 +756,16 @@
         hTitle.innerText = '戦績・統計';
         hBtn.style.display = 'none';
         document.querySelectorAll('.nav-item')[1].classList.add('active');
+        renderStats();
+      } else if (tabName === 'compare') {
+        hTitle.innerText = '比較';
+        hBtn.style.display = 'none';
+        document.querySelectorAll('.nav-item')[2].classList.add('active');
+        renderStats();
+      } else if (tabName === 'records') {
+        hTitle.innerText = '記録';
+        hBtn.style.display = 'none';
+        document.querySelectorAll('.nav-item')[3].classList.add('active');
         renderStats();
       }
     }
@@ -1369,6 +1427,8 @@
           vs: {}, 
           rawList: [],     
           topRawList: [],  
+          tobiCount: 0,
+          ptList: [],
           dailyTrend: {}      
         };
       });
@@ -1400,16 +1460,14 @@
             st.totalPt += r.totalPt;
             st.gamesCount += 1;
             st.rawList.push(mRawScore);
+            st.ptList.push(r.totalPt);
 
             if (!dailyMemberPt[pDate][mId]) dailyMemberPt[pDate][mId] = 0;
             dailyMemberPt[pDate][mId] += r.totalPt;
 
-            if (r.rankPt > 15) {
-              st.ranks[0] += 1;
-              st.topRawList.push(mRawScore);
-            } else if (r.rankPt > 0) st.ranks[1] += 1;
-            else if (r.rankPt > -20) st.ranks[2] += 1;
-            else st.ranks[3] += 1;
+            st.ranks[r.rank - 1] += 1;
+            if (r.rank === 1) st.topRawList.push(mRawScore);
+            if (mRawScore < 0) st.tobiCount += 1;
 
             calcRes.forEach(oppRes => {
               const oppId = active.find(a => a.idx === oppRes.idx).id;
@@ -1445,7 +1503,11 @@
           st.avoidLastRate = ((gc - st.ranks[3]) / gc) * 100;
           st.avgRaw = Math.round(st.rawList.reduce((a,b)=>a+b,0) / gc);
           st.topAvgRaw = st.ranks[0] > 0 ? Math.round(st.topRawList.reduce((a,b)=>a+b,0) / st.ranks[0]) : 0;
+          st.avgPt = st.totalPt / gc;
+          st.tobiRate = (st.tobiCount / gc) * 100;
         } else {
+          st.avgPt = 0;
+          st.tobiRate = 0;
           st.avgRank = 99;
           st.topRate = 0;
           st.rentaiRate = 0;
@@ -1465,11 +1527,22 @@
         select.value = currentSelected;
       }
 
+      const cSelect = document.getElementById('compare-member-select');
+      const cSelected = cSelect.value;
+      cSelect.innerHTML = select.innerHTML;
+      if (cSelected && allMembers.some(m => m.id === cSelected)) {
+        cSelect.value = cSelected;
+      } else {
+        cSelect.value = select.value;
+      }
+
       window.cachedStats = memberStats;
       window.cachedDates = activeDates;
 
       renderStatsRankList();
       renderStatsDetail();
+      renderCompare();
+      renderRecords();
     }
 
     function renderStatsRankList() {
@@ -1485,8 +1558,8 @@
         if (a.gamesCount === 0) return 1;
         if (b.gamesCount === 0) return -1;
 
-        if (sortKey === 'avgRank') {
-          return a.avgRank - b.avgRank;
+        if (sortKey === 'avgRank' || sortKey === 'tobiRate') {
+          return a[sortKey] - b[sortKey];
         } else {
           return b[sortKey] - a[sortKey];
         }
@@ -1504,6 +1577,13 @@
               const ptClass = st.totalPt >= 0 ? 'pt-plus' : 'pt-minus';
               const ptSign = st.totalPt >= 0 ? '+' : '';
               displayValStr = `<span class="${ptClass}" style="font-size:0.83rem;">${ptSign}${st.totalPt.toFixed(1)} P</span>`;
+              break;
+            case 'avgPt':
+              const apClass = st.avgPt >= 0 ? 'pt-plus' : 'pt-minus';
+              displayValStr = `<span class="${apClass}" style="font-size:0.83rem;">${st.avgPt >= 0 ? '+' : ''}${st.avgPt.toFixed(2)} P</span>`;
+              break;
+            case 'tobiRate':
+              displayValStr = `<span style="font-weight:bold; font-size:0.83rem;">${st.tobiRate.toFixed(1)} %</span>`;
               break;
             case 'avgRank':
               displayValStr = `<span style="font-weight:bold; font-size:0.83rem;">${st.avgRank.toFixed(2)} 位</span>`;
@@ -1564,7 +1644,12 @@
         document.getElementById('stat-sd-score').innerText = 'CV: -';
         document.getElementById('stat-top-avg-score').innerText = '-';
         document.getElementById('stat-top-sd-score').innerText = 'CV: -';
-        document.getElementById('stats-vs-list').innerHTML = '選択期間内の対局データがありません';
+        document.getElementById('stat-avg-pt').innerText = '-';
+        document.getElementById('stat-avg-pt').className = '';
+        document.getElementById('stat-total-pt').innerText = '通算: -';
+        document.getElementById('stat-sd-pt').innerText = 'SD: -';
+        document.getElementById('stat-tobi-rate').innerText = '- %';
+        document.getElementById('stat-tobi-count').innerText = '-';
 
         if (trendChart) trendChart.destroy();
         return;
@@ -1595,6 +1680,26 @@
       document.getElementById('stat-top-avg-score').innerText = st.ranks[0] > 0 ? `${st.topAvgRaw.toLocaleString()} 点` : '-';
       document.getElementById('stat-top-sd-score').innerText = st.ranks[0] > 0 ? `CV: ${cvTopRaw}%` : 'CV: -';
 
+      const avgPtEl = document.getElementById('stat-avg-pt');
+      avgPtEl.innerText = `${st.avgPt >= 0 ? '+' : ''}${st.avgPt.toFixed(2)} P`;
+      avgPtEl.className = st.avgPt >= 0 ? 'pt-plus' : 'pt-minus';
+      document.getElementById('stat-sd-pt').innerText = `SD: ${calculateSD(st.ptList, st.avgPt).toFixed(1)} P`;
+      document.getElementById('stat-total-pt').innerText = `通算: ${st.totalPt >= 0 ? '+' : ''}${st.totalPt.toFixed(1)} P`;
+      document.getElementById('stat-tobi-rate').innerText = `${st.tobiRate.toFixed(1)} %`;
+      document.getElementById('stat-tobi-count').innerText = `${st.tobiCount}回 / ${st.gamesCount}局`;
+
+      renderTrendChart(st);
+    }
+
+    function renderCompare() {
+      const mId = document.getElementById('compare-member-select').value;
+      if (!mId || !window.cachedStats) return;
+      const st = window.cachedStats[mId];
+      if (!st || st.gamesCount === 0) {
+        document.getElementById('stats-vs-list').innerHTML = '<span style="color:#64748b;">選択期間内の対局データがありません</span>';
+        return;
+      }
+
       const vsList = document.getElementById('stats-vs-list');
       vsList.innerHTML = '';
       const oppKeys = Object.keys(st.vs);
@@ -1624,7 +1729,108 @@
         });
       }
 
-      renderTrendChart(st);
+    }
+
+    function renderRecords() {
+      const listEl = document.getElementById('records-list');
+      const nameOf = id => allMembers.find(m => m.id === id)?.name || '不明';
+
+      // 期間内の半荘を時系列順に並べる（対局日 → 半荘番号）
+      const sessionMap = {};
+      sessions.filter(s => isDateInPeriod(s.play_date)).forEach(s => sessionMap[s.id] = s);
+      const games = allGames
+        .filter(g => sessionMap[g.session_id])
+        .sort((a, b) => {
+          const da = sessionMap[a.session_id].play_date, dbb = sessionMap[b.session_id].play_date;
+          if (da !== dbb) return da < dbb ? -1 : 1;
+          if (a.session_id !== b.session_id) return a.session_id < b.session_id ? -1 : 1;
+          return a.game_number - b.game_number;
+        });
+
+      const daily = {};      // `${date}|${mId}` -> Pt
+      const gameCount = {};  // mId -> 局数
+      const streak = {};     // mId -> {top, rentai, avoid, maxTop, maxRentai, maxAvoid}
+      let rawHigh = null, rawLow = null, topGap = null;
+      const better = (cur, val, higher) => cur === null || (higher ? val > cur.val : val < cur.val);
+      const update = (cur, val, holder, higher) => {
+        if (better(cur, val, higher)) return { val, holders: [holder] };
+        if (cur.val === val && !cur.holders.includes(holder)) cur.holders.push(holder);
+        return cur;
+      };
+
+      games.forEach(g => {
+        const active = [];
+        allMembers.forEach((m, idx) => {
+          const sc = scoresMap[`${g.id}_${m.id}`];
+          if (sc !== undefined && sc !== null) active.push({ id: m.id, idx, raw: Number(sc) });
+        });
+        if (active.length !== 4) return;
+        const date = sessionMap[g.session_id].play_date;
+        const res = calculateGameResult(active);
+
+        res.forEach(r => {
+          const mId = active.find(a => a.idx === r.idx).id;
+          rawHigh = update(rawHigh, r.raw, mId, true);
+          rawLow = update(rawLow, r.raw, mId, false);
+          daily[`${date}|${mId}`] = (daily[`${date}|${mId}`] || 0) + r.totalPt;
+          gameCount[mId] = (gameCount[mId] || 0) + 1;
+
+          const sk = streak[mId] || (streak[mId] = { top: 0, rentai: 0, avoid: 0, maxTop: 0, maxRentai: 0, maxAvoid: 0 });
+          sk.top = r.rank === 1 ? sk.top + 1 : 0;
+          sk.rentai = r.rank <= 2 ? sk.rentai + 1 : 0;
+          sk.avoid = r.rank <= 3 ? sk.avoid + 1 : 0;
+          sk.maxTop = Math.max(sk.maxTop, sk.top);
+          sk.maxRentai = Math.max(sk.maxRentai, sk.rentai);
+          sk.maxAvoid = Math.max(sk.maxAvoid, sk.avoid);
+        });
+
+        // 最大トップ差（1位と2位の素点差）
+        const raws = res.map(r => r.raw).sort((a, b) => b - a);
+        const gap = raws[0] - raws[1];
+        if (gap > 0) {
+          const topR = res.find(r => r.raw === raws[0]);
+          topGap = update(topGap, gap, active.find(a => a.idx === topR.idx).id, true);
+        }
+      });
+
+      if (games.length === 0 || Object.keys(gameCount).length === 0) {
+        listEl.innerHTML = '<p style="font-size:0.8rem; color:#64748b; padding:8px 0;">選択期間内の対局データがありません</p>';
+        return;
+      }
+
+      let dayWin = null, dayLose = null;
+      Object.entries(daily).forEach(([k, pt]) => {
+        const mId = k.split('|')[1];
+        const v = Math.round(pt * 10) / 10;
+        dayWin = update(dayWin, v, mId, true);
+        dayLose = update(dayLose, v, mId, false);
+      });
+
+      const maxOf = (obj, key) => {
+        let cur = null;
+        Object.entries(obj).forEach(([mId, o]) => { const v = key ? o[key] : o; cur = update(cur, v, mId, true); });
+        return cur;
+      };
+
+      const ptStr = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}P`;
+      const rows = [
+        ['最高持ち点', rawHigh, v => `${v.toLocaleString()}点`],
+        ['最低持ち点', rawLow, v => `${v.toLocaleString()}点`],
+        ['最大トップ差', topGap, v => `2着と${v.toLocaleString()}点差`],
+        ['1日最大勝ち', dayWin, ptStr],
+        ['1日最大負け', dayLose, ptStr],
+        ['最長連続トップ', maxOf(streak, 'maxTop'), v => `${v}連続`],
+        ['最長連続連対', maxOf(streak, 'maxRentai'), v => `${v}連続`],
+        ['最長連続ラス回避', maxOf(streak, 'maxAvoid'), v => `${v}連続`],
+        ['最多対局数', maxOf(gameCount), v => `${v}局`],
+      ];
+
+      listEl.innerHTML = rows.map(([label, rec, fmt]) => {
+        const holder = (!rec || (rec.val === 0 && label.includes('連続')))
+          ? '<span style="color:#94a3b8; font-weight:normal;">-</span>'
+          : `${rec.holders.map(nameOf).join('、')}<span class="record-val">(${fmt(rec.val)})</span>`;
+        return `<div class="record-row"><span class="record-label">${label}</span><span class="record-holder">${holder}</span></div>`;
+      }).join('');
     }
 
     function renderTrendChart(st) {
