@@ -96,6 +96,7 @@
     .record-section { font-weight: bold; font-size: 0.83rem; margin-top: 12px; margin-bottom: 2px; padding: 3px 6px; border-radius: 4px; background: #f1f5f9; }
     .record-sub { font-size: 0.63rem; color: #64748b; font-weight: normal; margin-left: 4px; }
 
+    .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 0.75rem; color: #94a3b8; pointer-events: none; padding: 0 16px; }
     .heat-table { border-collapse: collapse; font-size: 0.7rem; width: 100%; }
     .heat-table th, .heat-table td { border: 1px solid #fff; padding: 5px 2px; min-width: 40px; text-align: center; }
     .heat-table th { background: #f1f5f9; font-weight: bold; white-space: nowrap; }
@@ -360,7 +361,10 @@
     <!-- 5. 記録画面 -->
     <div id="tab-records" class="tab-content">
       <div class="stats-box" style="margin-top:0;">
-        <div style="font-weight: bold; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">🏆 期間内の記録</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+          <span style="font-weight: bold; font-size: 0.92rem;">🏆 期間内の記録</span>
+          <select id="records-member-select" onchange="renderRecords()" class="period-select"></select>
+        </div>
         <div id="records-list"></div>
       </div>
     </div>
@@ -374,6 +378,7 @@
         </div>
         <div style="margin-top: 8px; height: 220px; position: relative;">
           <canvas id="compareTrendChart"></canvas>
+          <div id="trend-empty" class="chart-empty">「👥 メンバー選択」から表示する人を選んでください</div>
         </div>
         <div style="font-size:0.61rem; color:#64748b; margin-top:4px;">● = 対局した日　／　点のない区間 = 不参加（Ptは前回から据え置き）</div>
       </div>
@@ -385,27 +390,36 @@
         </div>
         <div style="margin-top: 6px; height: 280px; position: relative;">
           <canvas id="compareRadarChart"></canvas>
+          <div id="radar-empty" class="chart-empty">「👥 メンバー選択」から表示する人を選んでください</div>
         </div>
         <div style="font-size:0.61rem; color:#64748b; margin-top:4px;">期間内に対局した全員の中での偏差値（50 = 平均）。安定度 = Ptのばらつき(SD)の小ささ。メンバー選択はPt推移と共通です。</div>
       </div>
 
       <div class="stats-box">
-        <div style="font-weight: bold; font-size: 0.92rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">🧩 相性表（先着率）</div>
-        <div style="font-size:0.61rem; color:#64748b; margin:4px 0;">行の人が列の人に先着した割合。緑 = 得意、赤 = 苦手。行の名前をタップすると下の対戦分析に切り替わります。</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+          <span style="font-weight: bold; font-size: 0.92rem;">🧩 相性表（先着率）</span>
+          <button class="btn btn-sm btn-secondary" onclick="openCompareMemberModal('heat')">👥 メンバー選択</button>
+        </div>
+        <div style="font-size:0.61rem; color:#64748b; margin:4px 0;">行の人が列の人に先着した割合。緑 = 得意、赤 = 苦手。行の名前をタップすると下の直接対決に切り替わります。</div>
         <div id="compare-heatmap" style="overflow-x:auto;"></div>
       </div>
 
       <div class="stats-box">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
-          <span style="font-weight: bold; font-size: 0.92rem;">⚔️ 対戦分析</span>
-          <select id="compare-member-select" onchange="renderCompare()" class="period-select"></select>
+          <span style="font-weight: bold; font-size: 0.92rem;">⚔️ 直接対決</span>
+          <select id="compare-member-select" onchange="renderVsList()" class="period-select"></select>
         </div>
-        <div style="font-weight:bold; font-size:0.83rem; margin-top:8px;">直接対決</div>
-        <div style="font-size:0.61rem; color:#64748b; margin-top:2px;">先着 = 同じ半荘で相手より上の着順だった回数（同着は引分）</div>
+        <div style="font-size:0.61rem; color:#64748b; margin-top:4px;">先着 = 同じ半荘で相手より上の着順だった回数（同着は引分）</div>
         <div id="stats-vs-list" style="font-size: 0.77rem; background: #f8fafc; border-radius: 5px; padding: 6px; margin-top: 4px;"></div>
 
-        <div style="font-weight:bold; font-size:0.83rem; margin-top:10px;">同卓メンバー別の成績</div>
-        <div style="font-size:0.61rem; color:#64748b; margin-top:2px;">その人が同じ卓にいた半荘／いなかった半荘での、自分の平均Pt・平均着順</div>
+      </div>
+
+      <div class="stats-box">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+          <span style="font-weight: bold; font-size: 0.92rem;">🀄 同卓メンバー別の成績</span>
+          <select id="combo-member-select" onchange="renderComboBox()" class="period-select"></select>
+        </div>
+        <div style="font-size:0.61rem; color:#64748b; margin-top:4px;">その人が同じ卓にいた半荘／いなかった半荘での、自分の平均Pt・平均着順</div>
         <div id="compare-combo-list" style="background: #f8fafc; border-radius: 5px; padding: 6px; margin-top: 4px;"></div>
       </div>
     </div>
@@ -460,7 +474,7 @@
   <div class="modal" id="compareMemberModal">
     <div class="modal-content">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <span style="font-weight:bold; font-size:0.94rem;">👥 グラフに表示するメンバー</span>
+        <span id="compare-modal-title" style="font-weight:bold; font-size:0.94rem;">👥 グラフに表示するメンバー</span>
         <span onclick="closeModal('compareMemberModal')" style="cursor:pointer; font-weight:bold;">✕</span>
       </div>
       <div style="display:flex; gap:6px; margin-bottom:6px;">
@@ -1622,6 +1636,11 @@
         cSelect.value = select.value;
       }
 
+      const coSelect = document.getElementById('combo-member-select');
+      const coSelected = coSelect.value;
+      coSelect.innerHTML = select.innerHTML;
+      coSelect.value = (coSelected && allMembers.some(m => m.id === coSelected)) ? coSelected : select.value;
+
       window.cachedStats = memberStats;
       window.cachedDates = activeDates;
 
@@ -1837,16 +1856,26 @@
       return { color: COMPARE_COLORS[i % COMPARE_COLORS.length], dash: COMPARE_DASHES[i % COMPARE_DASHES.length] };
     }
 
-    function openCompareMemberModal() {
+    let heatSelected = null;   // null = 全員（期間内に対局した人）
+    let pickerMode = 'chart';  // 'chart' = Pt推移・レーダー / 'heat' = 相性表
+
+    function openCompareMemberModal(mode = 'chart') {
+      pickerMode = mode;
+      document.getElementById('compare-modal-title').innerText =
+        mode === 'heat' ? '👥 相性表に表示するメンバー' : '👥 グラフに表示するメンバー';
       const box = document.getElementById('compare-member-checklist');
       const stats = window.cachedStats || {};
+      const sel = mode === 'heat'
+        ? (heatSelected || allMembers.filter(m => stats[m.id]?.gamesCount > 0).map(m => m.id))
+        : (compareSelected || []);
       box.innerHTML = allMembers.map(m => {
         const c = compareColorOf(m.id);
         const gc = stats[m.id]?.gamesCount || 0;
-        const checked = compareSelected && compareSelected.includes(m.id) ? 'checked' : '';
+        const checked = sel.includes(m.id) ? 'checked' : '';
+        const swatch = mode === 'heat' ? '' : `<span class="cmp-swatch" style="background:${c.color};"></span>`;
         return `<label class="cmp-check-row">
             <input type="checkbox" value="${m.id}" ${checked}>
-            <span class="cmp-swatch" style="background:${c.color};"></span>
+            ${swatch}
             ${renderAvatarHtml(m, 'avatar-sm')}
             <span style="flex-grow:1;">${m.name}</span>
             <span style="font-size:0.7rem; color:#64748b;">${gc}局</span>
@@ -1860,10 +1889,16 @@
     }
 
     function applyCompareMembers() {
-      compareSelected = [...document.querySelectorAll('#compare-member-checklist input:checked')].map(el => el.value);
+      const ids = [...document.querySelectorAll('#compare-member-checklist input:checked')].map(el => el.value);
       closeModal('compareMemberModal');
-      renderCompareChart();
-      renderRadarChart();
+      if (pickerMode === 'heat') {
+        heatSelected = ids;
+        renderHeatmap();
+      } else {
+        compareSelected = ids;
+        renderCompareChart();
+        renderRadarChart();
+      }
     }
 
     function renderCompareChart() {
@@ -1871,11 +1906,7 @@
       if (!stats) return;
       const dates = window.cachedDates || [];
 
-      if (compareSelected === null) {
-        // 初回: 期間内に対局した人を通算Pt順に最大4人
-        compareSelected = Object.values(stats).filter(st => st.gamesCount > 0)
-          .sort((a, b) => b.totalPt - a.totalPt).slice(0, 4).map(st => st.id);
-      }
+      if (compareSelected === null) compareSelected = []; // 初期状態は誰も選択しない
 
       const datasets = compareSelected.filter(id => stats[id]).map(id => {
         const st = stats[id];
@@ -1893,6 +1924,7 @@
         };
       });
 
+      document.getElementById('trend-empty').style.display = datasets.length ? 'none' : 'flex';
       const ctx = document.getElementById('compareTrendChart').getContext('2d');
       if (compareChart) compareChart.destroy();
       compareChart = new Chart(ctx, {
@@ -1927,7 +1959,8 @@
 
     function renderRadarChart() {
       const stats = window.cachedStats;
-      if (!stats || !compareSelected) return;
+      if (!stats) return;
+      if (compareSelected === null) compareSelected = [];
       const pool = Object.values(stats).filter(st => st.gamesCount > 0);
       const AXES = [
         ['平均Pt', st => st.avgPt, st => `${st.avgPt >= 0 ? '+' : ''}${st.avgPt.toFixed(2)}P`],
@@ -1956,6 +1989,7 @@
         };
       });
 
+      document.getElementById('radar-empty').style.display = datasets.length ? 'none' : 'flex';
       const ctx = document.getElementById('compareRadarChart').getContext('2d');
       if (radarChart) radarChart.destroy();
       radarChart = new Chart(ctx, {
@@ -1977,8 +2011,8 @@
       const stats = window.cachedStats;
       const box = document.getElementById('compare-heatmap');
       if (!stats) return;
-      const players = allMembers.filter(m => stats[m.id] && stats[m.id].gamesCount > 0);
-      if (players.length < 2) { box.innerHTML = '<span style="font-size:0.75rem; color:#64748b;">対戦データがありません</span>'; return; }
+      const players = allMembers.filter(m => stats[m.id] && stats[m.id].gamesCount > 0 && (heatSelected === null || heatSelected.includes(m.id)));
+      if (players.length < 2) { box.innerHTML = '<span style="font-size:0.75rem; color:#64748b;">2人以上選んでください（期間内に対局した人のみ表示）</span>'; return; }
 
       const cellColor = rate => {
         const t = Math.min(1, Math.abs(rate - 50) / 30); // ±30%で最大濃度
@@ -2005,7 +2039,7 @@
 
     function selectCompareMember(mId) {
       document.getElementById('compare-member-select').value = mId;
-      renderCompare();
+      renderVsList();
       document.getElementById('stats-vs-list').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
@@ -2040,17 +2074,31 @@
       renderCompareChart();
       renderRadarChart();
       renderHeatmap();
+      renderVsList();
+      renderComboBox();
+    }
 
+    function renderComboBox() {
+      const mId = document.getElementById('combo-member-select').value;
+      const box = document.getElementById('compare-combo-list');
+      if (!mId || !window.cachedStats) return;
+      const st = window.cachedStats[mId];
+      if (!st || st.gamesCount === 0) {
+        box.innerHTML = '<span style="font-size:0.75rem; color:#64748b;">選択期間内の対局データがありません</span>';
+        return;
+      }
+      renderComboList(st);
+    }
+
+    function renderVsList() {
       const mId = document.getElementById('compare-member-select').value;
       const vsList = document.getElementById('stats-vs-list');
       if (!mId || !window.cachedStats) return;
       const st = window.cachedStats[mId];
       if (!st || st.gamesCount === 0) {
         vsList.innerHTML = '<span style="color:#64748b;">選択期間内の対局データがありません</span>';
-        document.getElementById('compare-combo-list').innerHTML = '<span style="font-size:0.75rem; color:#64748b;">選択期間内の対局データがありません</span>';
         return;
       }
-      renderComboList(st);
 
       const oppKeys = Object.keys(st.vs);
       if (oppKeys.length === 0) {
@@ -2102,6 +2150,13 @@
       const listEl = document.getElementById('records-list');
       const nameOf = id => allMembers.find(m => m.id === id)?.name || '不明';
 
+      // 表示対象（全体 / 個人）の選択肢
+      const mSel = document.getElementById('records-member-select');
+      const prevSel = mSel.value;
+      mSel.innerHTML = '<option value="">全体</option>' + allMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+      mSel.value = (prevSel && allMembers.some(m => m.id === prevSel)) ? prevSel : '';
+      const target = mSel.value; // '' = 全体
+
       // 期間内の半荘を時系列順に並べる（対局日 → 半荘番号）
       const sessionMap = {};
       sessions.filter(s => isDateInPeriod(s.play_date)).forEach(s => sessionMap[s.id] = s);
@@ -2114,26 +2169,20 @@
           return a.game_number - b.game_number;
         });
 
-      // 連続記録の種類: 条件(着順) → 成立
+      // 連続記録の種類（着順 → 条件成立か）
       const STREAKS = {
-        top: r => r === 1,          // 連続トップ
-        rentai: r => r <= 2,        // 連続連対
-        avoid: r => r <= 3,         // 連続ラス回避
-        last: r => r === 4,         // 連続ラス
-        gyaku: r => r >= 3,         // 連続逆連対 (3・4着)
-        noTop: r => r !== 1         // トップなし
+        top: r => r === 1,      // 連続トップ
+        rentai: r => r <= 2,    // 連続連対
+        avoid: r => r <= 3,     // 連続ラス回避
+        last: r => r === 4,     // 連続ラス
+        gyaku: r => r >= 3,     // 連続逆連対 (3・4着)
+        noTop: r => r !== 1     // トップなし
       };
 
-      const daily = {};      // `${date}|${mId}` -> Pt
-      const gameCount = {};  // mId -> 局数
-      const tobiCount = {};  // mId -> 飛び回数
-      const cur = {}, best = {}; // mId -> {種類: 連続数}
-      let rawHigh = null, rawLow = null, topGap = null;
-      const update = (rec, val, holder, higher) => {
-        if (rec === null || (higher ? val > rec.val : val < rec.val)) return { val, holders: [holder] };
-        if (rec.val === val && !rec.holders.includes(holder)) rec.holders.push(holder);
-        return rec;
-      };
+      // メンバーごとの記録
+      const P = {}; // mId -> {rawHigh, rawLow, topGap, games, tobi, cur:{}, best:{}}
+      const pm = id => P[id] || (P[id] = { rawHigh: -Infinity, rawLow: Infinity, topGap: 0, games: 0, tobi: 0, cur: {}, best: {} });
+      const daily = {}; // `${date}|${mId}` -> Pt
 
       games.forEach(g => {
         const active = [];
@@ -2144,99 +2193,111 @@
         if (active.length !== 4) return;
         const date = sessionMap[g.session_id].play_date;
         const res = calculateGameResult(active);
+        const raws = res.map(r => r.raw).sort((a, b) => b - a);
 
         res.forEach(r => {
           const mId = active.find(a => a.idx === r.idx).id;
-          rawHigh = update(rawHigh, r.raw, mId, true);
-          rawLow = update(rawLow, r.raw, mId, false);
+          const o = pm(mId);
+          o.rawHigh = Math.max(o.rawHigh, r.raw);
+          o.rawLow = Math.min(o.rawLow, r.raw);
+          o.games += 1;
+          if (r.raw < 0) o.tobi += 1;
+          if (r.raw === raws[0] && raws[0] > raws[1]) o.topGap = Math.max(o.topGap, raws[0] - raws[1]);
           daily[`${date}|${mId}`] = (daily[`${date}|${mId}`] || 0) + r.totalPt;
-          gameCount[mId] = (gameCount[mId] || 0) + 1;
-          tobiCount[mId] = (tobiCount[mId] || 0) + (r.raw < 0 ? 1 : 0);
-
-          const c = cur[mId] || (cur[mId] = {});
-          const b = best[mId] || (best[mId] = {});
           Object.entries(STREAKS).forEach(([k, cond]) => {
-            c[k] = cond(r.rank) ? (c[k] || 0) + 1 : 0;
-            b[k] = Math.max(b[k] || 0, c[k]);
+            o.cur[k] = cond(r.rank) ? (o.cur[k] || 0) + 1 : 0;
+            o.best[k] = Math.max(o.best[k] || 0, o.cur[k]);
           });
         });
-
-        // 最大トップ差（1位と2位の素点差）
-        const raws = res.map(r => r.raw).sort((a, b) => b - a);
-        const gap = raws[0] - raws[1];
-        if (gap > 0) {
-          const topR = res.find(r => r.raw === raws[0]);
-          topGap = update(topGap, gap, active.find(a => a.idx === topR.idx).id, true);
-        }
+      });
+      Object.entries(daily).forEach(([k, pt]) => {
+        const o = P[k.split('|')[1]];
+        const v = Math.round(pt * 10) / 10;
+        o.dayWin = Math.max(o.dayWin ?? -Infinity, v);
+        o.dayLose = Math.min(o.dayLose ?? Infinity, v);
       });
 
-      if (Object.keys(gameCount).length === 0) {
+      if (Object.keys(P).length === 0 || (target && !P[target])) {
         listEl.innerHTML = '<p style="font-size:0.8rem; color:#64748b; padding:8px 0;">選択期間内の対局データがありません</p>';
         return;
       }
 
-      let dayWin = null, dayLose = null;
-      Object.entries(daily).forEach(([k, pt]) => {
-        const mId = k.split('|')[1];
-        const v = Math.round(pt * 10) / 10;
-        dayWin = update(dayWin, v, mId, true);
-        dayLose = update(dayLose, v, mId, false);
-      });
-
-      const maxOf = (obj, key) => {
-        let rec = null;
-        Object.entries(obj).forEach(([mId, o]) => { rec = update(rec, key ? (o[key] || 0) : o, mId, true); });
-        return rec;
-      };
-
       const ptStr = v => `${v >= 0 ? '+' : ''}${v.toFixed(1)}P`;
       const ren = v => `${v}連続`;
-      const empty = '<span style="color:#94a3b8; font-weight:normal;">-</span>';
-      const rowHtml = (label, holderHtml) =>
-        `<div class="record-row"><span class="record-label">${label}</span><span class="record-holder">${holderHtml}</span></div>`;
-      // minVal: この値未満なら記録なし扱い
-      const recRow = ([label, rec, fmt, minVal]) => {
-        const ok = rec && (minVal === undefined || rec.val >= minVal);
-        return rowHtml(label, ok ? `${rec.holders.map(nameOf).join('、')}<span class="record-val">(${fmt(rec.val)})</span>` : empty);
-      };
-
-      const glory = [
-        ['最高持ち点', rawHigh, v => `${v.toLocaleString()}点`],
-        ['最大トップ差', topGap, v => `2着と${v.toLocaleString()}点差`],
-        ['1日最大勝ち', dayWin, ptStr],
-        ['最長連続トップ', maxOf(best, 'top'), ren, 1],
-        ['最長連続連対', maxOf(best, 'rentai'), ren, 1],
-        ['最長連続ラス回避', maxOf(best, 'avoid'), ren, 1],
-        ['最多対局数', maxOf(gameCount), v => `${v}局`],
+      const pts = v => `${v.toLocaleString()}点`;
+      // [記録名, 値の取り出し, 表示形式, 高い方が記録か, 最低値(未満は記録なし)]
+      const GLORY = [
+        ['最高持ち点', o => o.rawHigh, pts, true],
+        ['最大トップ差', o => o.topGap, v => `2着と${v.toLocaleString()}点差`, true, 1],
+        ['1日最大勝ち', o => o.dayWin, ptStr, true],
+        ['最長連続トップ', o => o.best.top || 0, ren, true, 1],
+        ['最長連続連対', o => o.best.rentai || 0, ren, true, 1],
+        ['最長連続ラス回避', o => o.best.avoid || 0, ren, true, 1],
+        ['最多対局数', o => o.games, v => `${v}局`, true],
       ];
-      const shame = [
-        ['最低持ち点', rawLow, v => `${v.toLocaleString()}点`],
-        ['1日最大負け', dayLose, ptStr],
-        ['最長連続ラス', maxOf(best, 'last'), ren, 1],
-        ['最長連続逆連対', maxOf(best, 'gyaku'), ren, 1],
-        ['最長トップなし', maxOf(best, 'noTop'), v => `${v}局連続`, 1],
-        ['最多飛び', maxOf(tobiCount), v => `${v}回`, 1],
+      const SHAME = [
+        ['最低持ち点', o => o.rawLow, pts, false],
+        ['1日最大負け', o => o.dayLose, ptStr, false],
+        ['最長連続ラス', o => o.best.last || 0, ren, true, 1],
+        ['最長連続逆連対', o => o.best.gyaku || 0, ren, true, 1],
+        ['最長トップなし', o => o.best.noTop || 0, v => `${v}局連続`, true, 1],
+        ['最多飛び', o => o.tobi, v => `${v}回`, true, 1],
       ];
-
-      // リアルタイム記録: 期間内の最新の半荘時点で継続中の連続記録（2連続以上）
-      const live = [
+      const LIVE = [
         ['🔥 連続トップ中', 'top', ''],
         ['🔥 連続連対中', 'rentai', ''],
         ['🔥 連続ラス回避中', 'avoid', ''],
         ['🥶 連続ラス中', 'last', ''],
         ['🥶 連続逆連対中', 'gyaku', ''],
         ['🥶 トップなし継続中', 'noTop', '局'],
-      ].map(([label, k, unit]) => {
-        const list = Object.entries(cur).filter(([, c]) => (c[k] || 0) >= 2).sort((a, b) => b[1][k] - a[1][k]);
-        const html = list.length === 0 ? empty
-          : list.map(([mId, c]) => `${nameOf(mId)}<span class="record-val">(${c[k]}${unit}連続)</span>`).join('、');
-        return rowHtml(label, html);
-      });
+      ];
+
+      const empty = '<span style="color:#94a3b8; font-weight:normal;">-</span>';
+      const rowHtml = (label, holderHtml) =>
+        `<div class="record-row"><span class="record-label">${label}</span><span class="record-holder">${holderHtml}</span></div>`;
+      const valHtml = txt => `<span>${txt}</span>`;
+
+      let liveRows, recRow, liveSub;
+      if (!target) {
+        // ---- 全体 ----
+        liveSub = '継続中の連続記録（2連続以上・上位2名）';
+        liveRows = LIVE.map(([label, k, unit]) => {
+          const list = Object.entries(P).filter(([, o]) => (o.cur[k] || 0) >= 2)
+            .sort((a, b) => b[1].cur[k] - a[1].cur[k]).slice(0, 2);
+          return rowHtml(label, list.length === 0 ? empty
+            : list.map(([mId, o]) => `${nameOf(mId)}<span class="record-val">(${o.cur[k]}${unit}連続)</span>`).join('、'));
+        });
+        recRow = ([label, get, fmt, higher, minVal]) => {
+          let best = null, holders = [];
+          Object.entries(P).forEach(([mId, o]) => {
+            const v = get(o);
+            if (v === undefined || !isFinite(v)) return;
+            if (best === null || (higher ? v > best : v < best)) { best = v; holders = [mId]; }
+            else if (v === best) holders.push(mId);
+          });
+          const ok = best !== null && (minVal === undefined || best >= minVal);
+          return rowHtml(label, ok ? `${holders.map(nameOf).join('、')}<span class="record-val">(${fmt(best)})</span>` : empty);
+        };
+      } else {
+        // ---- 個人 ----
+        const o = P[target];
+        liveSub = `${nameOf(target)} の継続中の連続記録`;
+        liveRows = LIVE.map(([label, k, unit]) => {
+          const v = o.cur[k] || 0;
+          return rowHtml(label, v >= 1 ? valHtml(`${v}${unit}連続`) : empty);
+        });
+        recRow = ([label, get, fmt, , minVal]) => {
+          const v = get(o);
+          const ok = v !== undefined && isFinite(v) && (minVal === undefined || v >= minVal || label === '最多飛び');
+          const lbl = label === '最多対局数' ? '対局数' : label === '最多飛び' ? '飛び回数' : label;
+          return rowHtml(lbl, ok ? valHtml(fmt(v)) : empty);
+        };
+      }
 
       listEl.innerHTML =
-        `<div class="record-section">⏱ リアルタイム記録<span class="record-sub">継続中の連続記録（2連続以上）</span></div>` + live.join('') +
-        `<div class="record-section">🏆 栄光の記録</div>` + glory.map(recRow).join('') +
-        `<div class="record-section">💀 不名誉な記録</div>` + shame.map(recRow).join('');
+        `<div class="record-section">⏱ リアルタイム記録<span class="record-sub">${liveSub}</span></div>` + liveRows.join('') +
+        `<div class="record-section">🏆 栄光の記録${target ? '<span class="record-sub">自己ベスト</span>' : ''}</div>` + GLORY.map(recRow).join('') +
+        `<div class="record-section">💀 不名誉な記録${target ? '<span class="record-sub">自己ワースト</span>' : ''}</div>` + SHAME.map(recRow).join('');
     }
 
     function renderTrendChart(st) {
