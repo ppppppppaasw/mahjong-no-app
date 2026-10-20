@@ -227,9 +227,9 @@
   <div class="period-filter-container" id="period-filter-bar">
     <div class="period-row">
       <span style="font-size:0.71rem; font-weight:bold; color:#4a5568;">期間:</span>
-      <select id="period-type-select" class="period-select" onchange="onPeriodTypeChange()">
+      <select id="period-type-select" class="period-select" autocomplete="off" onchange="onPeriodTypeChange()">
         <option value="all">全期間</option>
-        <option value="half">半期指定</option>
+        <option value="half" selected>半期指定</option>
         <option value="year">年指定</option>
         <option value="month">年月指定</option>
         <option value="range">任意期間 (年月〜年月)</option>
