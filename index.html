@@ -89,6 +89,19 @@
     th { background: #dbe4d8; vertical-align: middle; }
     .score-cell { cursor: pointer; height: 48px; vertical-align: middle; line-height: 1.15; }
 
+    /* 局記録 */
+    .round-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 7px 4px; border-bottom: 1px solid #edf2f7; font-size: 0.78rem; cursor: pointer; }
+    .round-row:active { background: #f1f5f9; }
+    .round-tag { display: inline-block; font-size: 0.62rem; padding: 0 4px; border-radius: 3px; margin-left: 3px; background: #e2e8f0; color: #334155; }
+    .res-btn { flex: 1; padding: 8px 0; border-radius: 6px; border: 2px solid #cbd5e1; background: #fff; font-weight: bold; font-size: 0.85rem; cursor: pointer; }
+    .res-btn.on { border-color: var(--header-bg); background: var(--header-bg); color: #fff; }
+    .pick-label { font-size: 0.72rem; color: #64748b; font-weight: bold; margin: 8px 0 3px; }
+    .pick-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .pick-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px; border-radius: 6px; border: 2px solid #e2e8f0; background: #fff; font-size: 0.7rem; cursor: pointer; }
+    .pick-btn.on { border-color: var(--header-bg); background: #dbe4d8; font-weight: bold; }
+    .pick-btn.on-red { border-color: #b91c1c; background: #fee2e2; font-weight: bold; }
+    .pick-btn.disabled { opacity: 0.35; pointer-events: none; }
+
     /* 比較 */
     .cmp-check-row { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px solid #edf2f7; font-size: 0.85rem; cursor: pointer; }
     .cmp-check-row input { width: 18px; height: 18px; }
@@ -255,7 +268,7 @@
             <button class="btn btn-sm btn-secondary" onclick="addNewGame()">＋ 半荘追加</button>
           </div>
         </div>
-        <p style="font-size: 0.66rem; color: #64748b; margin-bottom: 6px;">マス目をタップしてスコアを入力</p>
+        <p style="font-size: 0.66rem; color: #64748b; margin-bottom: 6px;">マス目をタップしてスコアを入力　／　半荘番号をタップで局記録・削除</p>
 
         <div style="overflow-x: auto;">
           <table>
@@ -355,6 +368,14 @@
           </div>
         </div>
 
+      </div>
+
+      <div class="stats-box" id="round-stats-box">
+        <div style="display:flex; justify-content:space-between; align-items:baseline; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+          <span style="font-weight: bold; font-size: 0.92rem;">🀄 局スタッツ</span>
+          <span id="round-stats-count" style="font-size:0.63rem; color:#64748b;"></span>
+        </div>
+        <div class="stats-grid" id="round-stats-grid"></div>
       </div>
     </div>
 
@@ -468,6 +489,34 @@
         <span onclick="closeModal('addSessionMemberModal')" style="cursor:pointer; font-weight:bold;">✕</span>
       </div>
       <div id="sessionMemberSelectList" style="max-height:240px; overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- 局記録一覧モーダル -->
+  <div class="modal" id="roundsModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span id="rounds-modal-title" style="font-weight:bold; font-size:0.94rem;">🀄 局記録</span>
+        <span onclick="closeModal('roundsModal')" style="cursor:pointer; font-weight:bold;">✕</span>
+      </div>
+      <div id="rounds-modal-body"></div>
+      <div style="display:flex; gap:6px; margin-top:10px;">
+        <button class="btn" style="flex:2;" id="rounds-add-btn" onclick="openRoundEditor(null)">＋ 局を追加</button>
+        <button class="btn btn-danger" style="flex:1;" onclick="deleteGameFromRoundsModal()">🗑 半荘削除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1局の入力モーダル -->
+  <div class="modal" id="roundEditModal" style="z-index:210;">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span id="round-edit-title" style="font-weight:bold; font-size:0.94rem;">局の入力</span>
+        <span onclick="closeModal('roundEditModal')" style="cursor:pointer; font-weight:bold;">✕</span>
+      </div>
+      <div id="round-edit-body"></div>
+      <div id="round-edit-error" style="color:#b91c1c; font-size:0.75rem; min-height:1em; margin-top:6px;"></div>
+      <div style="display:flex; gap:6px; margin-top:4px;" id="round-edit-buttons"></div>
     </div>
   </div>
 
@@ -682,9 +731,29 @@
             if (activeTabName === 'main') renderMain();
             if (activeTabName === 'detail') loadDetailSession(currentSessionId);
             if (['stats', 'compare', 'records'].includes(activeTabName)) renderStats();
+            if (document.getElementById('roundsModal').classList.contains('active')) renderRoundsList();
           }
         )
         .subscribe();
+    }
+
+    let allRounds = [];
+    let roundsByGame = {};     // game_id -> [round]
+    let roundPlayersMap = {};  // round_id -> { member_id: round_players行 }
+
+    // Supabaseは1回の問い合わせで最大1000件までしか返さないため、1000件ずつ最後まで取得する
+    // （ページをまたいで重複・欠落しないよう、一意になる列で並び順を固定する）
+    async function fetchAllRows(table, orderCols = ['id']) {
+      let all = [];
+      for (let from = 0; ; from += 1000) {
+        let q = db.from(table).select('*');
+        orderCols.forEach(c => q = q.order(c, { ascending: true }));
+        const { data, error } = await q.range(from, from + 999);
+        if (error || !data) break;
+        all = all.concat(data);
+        if (data.length < 1000) break;
+      }
+      return all;
     }
 
     async function fetchAllData() {
@@ -694,12 +763,19 @@
       const { data: sData } = await db.from('sessions').select('*').order('play_date', { ascending: true });
       sessions = sData || [];
 
-      const { data: gData } = await db.from('games').select('*');
-      allGames = gData || [];
+      allGames = await fetchAllRows('games');
 
-      const { data: scData } = await db.from('scores').select('*');
+      // 局記録（rounds / round_players）: 1000件を超えても全件取得する
+      allRounds = await fetchAllRows('rounds');
+      roundsByGame = {};
+      allRounds.forEach(r => (roundsByGame[r.game_id] = roundsByGame[r.game_id] || []).push(r));
+      Object.values(roundsByGame).forEach(arr => arr.sort((a, b) => a.round_no - b.round_no));
+      roundPlayersMap = {};
+      (await fetchAllRows('round_players', ['round_id', 'member_id'])).forEach(rp => (roundPlayersMap[rp.round_id] = roundPlayersMap[rp.round_id] || {})[rp.member_id] = rp);
+
+      const scData = await fetchAllRows('scores', ['game_id', 'member_id']);
       scoresMap = {};
-      (scData || []).forEach(sc => scoresMap[`${sc.game_id}_${sc.member_id}`] = sc.raw_score);
+      scData.forEach(sc => scoresMap[`${sc.game_id}_${sc.member_id}`] = sc.raw_score);
 
       if (!currentSessionId && sessions.length > 0) {
         currentSessionId = sessions[sessions.length - 1].id;
@@ -1072,7 +1148,9 @@
         let resMap = {};
         calcResult.forEach(r => resMap[r.idx] = r);
 
-        let tr = `<tr><td style="font-weight:bold; background:#edf2f7; cursor:pointer;" onclick="confirmDeleteGame('${g.id}', ${g.game_number})" title="タップで削除">${g.game_number} ${alertMark}</td>`;
+        const roundCnt = (roundsByGame[g.id] || []).length;
+        const roundBadge = roundCnt > 0 ? `<div style="font-size:0.55rem; color:#64748b; font-weight:normal;">🀄${roundCnt}</div>` : '';
+        let tr = `<tr><td style="font-weight:bold; background:#edf2f7; cursor:pointer;" onclick="openRoundsModal('${g.id}', ${g.game_number})" title="タップで局記録・削除">${g.game_number} ${alertMark}${roundBadge}</td>`;
         currentSessionMembers.forEach((m, mIdx) => {
           const res = resMap[mIdx];
           if (res && res.raw !== null) {
@@ -1144,6 +1222,294 @@
         console.error('削除エラー:', err);
         alert('削除処理に失敗しました。');
       }
+    }
+
+    // ===== 局記録 =====
+    let rmGameId = null, rmGameNumber = null;
+    let rmPlayersOverride = {}; // game_id -> [member_id]（参加者を手動で選んだ場合）
+    let ed = null;              // 編集中の局
+
+    function playersOfGame(gId) {
+      const scored = allMembers.filter(m => scoresMap[`${gId}_${m.id}`] !== undefined && scoresMap[`${gId}_${m.id}`] !== null);
+      if (scored.length === 4) return scored;
+      const rs = roundsByGame[gId] || [];
+      if (rs.length > 0 && roundPlayersMap[rs[0].id]) {
+        const ids = Object.keys(roundPlayersMap[rs[0].id]);
+        if (ids.length === 4) return allMembers.filter(m => ids.includes(m.id));
+      }
+      if (rmPlayersOverride[gId]) return allMembers.filter(m => rmPlayersOverride[gId].includes(m.id));
+      if (currentSessionMembers.length === 4) return currentSessionMembers;
+      return null; // 参加者が確定できない
+    }
+
+    function openRoundsModal(gId, gNum) {
+      rmGameId = gId; rmGameNumber = gNum;
+      document.getElementById('rounds-modal-title').innerText = `🀄 第${gNum}半荘の局記録`;
+      renderRoundsList();
+      document.getElementById('roundsModal').classList.add('active');
+    }
+
+    function roundSummaryHtml(r, players) {
+      const rp = roundPlayersMap[r.id] || {};
+      const nm = id => allMembers.find(m => m.id === id)?.name || '?';
+      const ids = Object.keys(rp);
+      const wins = ids.filter(id => rp[id].is_win);
+      const deal = ids.find(id => rp[id].is_dealin);
+      const pts = id => rp[id].win_points ? `(${Number(rp[id].win_points).toLocaleString()})` : '';
+      let main = '';
+      if (r.result === 'tsumo') main = `<b>ツモ</b> ${wins.map(id => nm(id) + pts(id)).join('・')}`;
+      else if (r.result === 'ron') main = `<b>ロン</b> ${wins.map(id => nm(id) + pts(id)).join('・')} ← ${deal ? nm(deal) : '?'}`;
+      else {
+        const tp = ids.filter(id => rp[id].is_tenpai);
+        main = `<b>流局</b> ${tp.length ? '聴: ' + tp.map(nm).join('・') : '全員ノーテン'}`;
+      }
+      const ri = ids.filter(id => rp[id].is_riichi), fu = ids.filter(id => rp[id].is_furo);
+      const tags = (ri.length ? `<span class="round-tag">立 ${ri.map(nm).join('・')}</span>` : '') +
+                   (fu.length ? `<span class="round-tag">鳴 ${fu.map(nm).join('・')}</span>` : '');
+      return `${main}${tags}`;
+    }
+
+    function renderRoundsList() {
+      const body = document.getElementById('rounds-modal-body');
+      const players = playersOfGame(rmGameId);
+      const addBtn = document.getElementById('rounds-add-btn');
+      if (!players) {
+        // 参加者が4人に決まらない場合は先に選んでもらう
+        addBtn.style.display = 'none';
+        const cand = currentSessionMembers.length ? currentSessionMembers : allMembers;
+        body.innerHTML = `<div style="font-size:0.78rem; margin-bottom:6px;">この半荘の参加者を4人選んでください</div>
+          <div class="pick-row" id="rm-player-pick">${cand.map(m => `
+            <div class="pick-btn" data-id="${m.id}" onclick="this.classList.toggle('on')">${renderAvatarHtml(m, 'avatar-sm')}<span>${m.name}</span></div>`).join('')}</div>
+          <button class="btn" style="width:100%; margin-top:8px;" onclick="confirmRoundPlayers()">決定</button>`;
+        return;
+      }
+      addBtn.style.display = '';
+      const rs = roundsByGame[rmGameId] || [];
+      body.innerHTML = rs.length === 0
+        ? '<div style="font-size:0.78rem; color:#64748b; padding:8px 0;">まだ局の記録はありません。「＋ 局を追加」から1局ずつ入力できます。<br>（入力は任意です。入力した局だけが局スタッツに集計されます）</div>'
+        : rs.map((r, i) => `<div class="round-row" onclick="openRoundEditor('${r.id}')">
+              <span style="color:#64748b; width:18px;">${i + 1}</span>
+              <span style="flex-grow:1;">${roundSummaryHtml(r, players)}</span>
+              <span style="color:#94a3b8;">›</span></div>`).join('');
+    }
+
+    function confirmRoundPlayers() {
+      const ids = [...document.querySelectorAll('#rm-player-pick .pick-btn.on')].map(el => el.dataset.id);
+      if (ids.length !== 4) { alert('4人選んでください'); return; }
+      rmPlayersOverride[rmGameId] = ids;
+      renderRoundsList();
+    }
+
+    function openRoundEditor(roundId) {
+      const players = playersOfGame(rmGameId);
+      if (!players) return;
+      const rs = roundsByGame[rmGameId] || [];
+      if (roundId) {
+        const r = rs.find(x => x.id === roundId);
+        const rp = roundPlayersMap[roundId] || {};
+        const pick = f => new Set(Object.keys(rp).filter(id => rp[id][f]));
+        const pts = {};
+        Object.keys(rp).forEach(id => { if (rp[id].win_points) pts[id] = rp[id].win_points; });
+        ed = { roundId, no: rs.indexOf(r) + 1, result: r.result, win: pick('is_win'),
+               dealin: Object.keys(rp).find(id => rp[id].is_dealin) || null,
+               tenpai: pick('is_tenpai'), riichi: pick('is_riichi'), furo: pick('is_furo'), points: pts };
+      } else {
+        ed = { roundId: null, no: rs.length + 1, result: null, win: new Set(), dealin: null,
+               tenpai: new Set(), riichi: new Set(), furo: new Set(), points: {} };
+      }
+      ed.players = players;
+      document.getElementById('round-edit-title').innerText = `第${rmGameNumber}半荘　${ed.no}局目`;
+      document.getElementById('round-edit-error').innerText = '';
+      renderRoundEditor();
+      document.getElementById('roundEditModal').classList.add('active');
+    }
+
+    function edToggle(kind, id) {
+      if (kind === 'result') {
+        ed.result = id;
+        if (id === 'tsumo' && ed.win.size > 1) ed.win = new Set([...ed.win].slice(0, 1));
+        if (id !== 'ron') ed.dealin = null;
+        if (id === 'ryukyoku') ed.win = new Set();
+      } else if (kind === 'win') {
+        if (ed.result === 'tsumo') ed.win = ed.win.has(id) ? new Set() : new Set([id]);
+        else ed.win.has(id) ? ed.win.delete(id) : ed.win.add(id); // ロンはダブロン可
+        if (ed.dealin === id) ed.dealin = null;
+      } else if (kind === 'dealin') {
+        ed.dealin = ed.dealin === id ? null : id;
+        ed.win.delete(id);
+      } else {
+        ed[kind].has(id) ? ed[kind].delete(id) : ed[kind].add(id);
+      }
+      renderRoundEditor();
+    }
+
+    function renderRoundEditor() {
+      const P = ed.players;
+      const row = (kind, isOn, cls = 'on', disabledFn = () => false) => `<div class="pick-row">${P.map(m => `
+          <div class="pick-btn ${isOn(m.id) ? cls : ''} ${disabledFn(m.id) ? 'disabled' : ''}" onclick="edToggle('${kind}', '${m.id}')">
+            ${renderAvatarHtml(m, 'avatar-sm')}<span>${m.name}</span></div>`).join('')}</div>`;
+      let h = `<div style="display:flex; gap:6px;">
+          ${[['tsumo', 'ツモ'], ['ron', 'ロン'], ['ryukyoku', '流局']].map(([k, l]) =>
+            `<button class="res-btn ${ed.result === k ? 'on' : ''}" onclick="edToggle('result', '${k}')">${l}</button>`).join('')}
+        </div>`;
+      if (ed.result === 'tsumo' || ed.result === 'ron') {
+        h += `<div class="pick-label">和了${ed.result === 'ron' ? '（ダブロンは複数選択）' : ''}</div>` + row('win', id => ed.win.has(id));
+        if (ed.result === 'ron') h += `<div class="pick-label">放銃</div>` + row('dealin', id => ed.dealin === id, 'on-red', id => ed.win.has(id));
+        if (ed.win.size > 0) {
+          h += `<div class="pick-label">打点（任意・点）</div>` + [...ed.win].map(id => {
+            const m = P.find(x => x.id === id);
+            return `<div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:0.78rem;">
+                <span style="width:70px;">${m.name}</span>
+                <input type="number" inputmode="numeric" class="period-input" style="flex:1;" placeholder="例: 7700"
+                  value="${ed.points[id] ?? ''}" oninput="ed.points['${id}'] = this.value"></div>`;
+          }).join('');
+        }
+      }
+      if (ed.result === 'ryukyoku') h += `<div class="pick-label">聴牌（複数可・なしなら全員ノーテン）</div>` + row('tenpai', id => ed.tenpai.has(id));
+      if (ed.result) {
+        h += `<div class="pick-label">リーチ（複数可）</div>` + row('riichi', id => ed.riichi.has(id));
+        h += `<div class="pick-label">副露（複数可）</div>` + row('furo', id => ed.furo.has(id));
+      }
+      document.getElementById('round-edit-body').innerHTML = h;
+
+      const btns = document.getElementById('round-edit-buttons');
+      btns.innerHTML = ed.roundId
+        ? `<button class="btn btn-danger" style="flex:1;" onclick="deleteRound()">削除</button>
+           <button class="btn" style="flex:2;" onclick="saveRound(false)">保存</button>`
+        : `<button class="btn btn-secondary" style="flex:1;" onclick="saveRound(false)">保存して閉じる</button>
+           <button class="btn" style="flex:2;" onclick="saveRound(true)">保存して次の局へ</button>`;
+    }
+
+    async function saveRound(goNext) {
+      const err = document.getElementById('round-edit-error');
+      if (!ed.result) { err.innerText = '結果（ツモ／ロン／流局）を選んでください'; return; }
+      if (ed.result !== 'ryukyoku' && ed.win.size === 0) { err.innerText = '和了した人を選んでください'; return; }
+      if (ed.result === 'ron' && !ed.dealin) { err.innerText = '放銃した人を選んでください'; return; }
+      err.innerText = '保存中...';
+
+      try {
+        let roundId = ed.roundId;
+        if (roundId) {
+          const { error: e1 } = await db.from('rounds').update({ result: ed.result }).eq('id', roundId);
+          if (e1) throw e1;
+          const { error: e2 } = await db.from('round_players').delete().eq('round_id', roundId);
+          if (e2) throw e2;
+        } else {
+          const rs = roundsByGame[rmGameId] || [];
+          const nextNo = rs.reduce((mx, r) => Math.max(mx, r.round_no), 0) + 1;
+          const { data, error } = await db.from('rounds').insert([{ game_id: rmGameId, round_no: nextNo, result: ed.result }]).select();
+          if (error) throw error;
+          roundId = data[0].id;
+        }
+        // 参加者4人分の行を必ず作る（＝この4人がこの局に参加した記録。集計の分母になる）
+        const rows = ed.players.map(m => {
+          const isWin = ed.win.has(m.id);
+          const row = {
+            round_id: roundId, member_id: m.id,
+            is_win: isWin,
+            is_dealin: ed.result === 'ron' && ed.dealin === m.id,
+            is_riichi: ed.riichi.has(m.id),
+            is_furo: ed.furo.has(m.id),
+            is_tenpai: isWin || (ed.result === 'ryukyoku' && ed.tenpai.has(m.id))
+          };
+          const pt = parseInt(ed.points[m.id], 10);
+          if (isWin && pt > 0) row.win_points = pt; // 打点は入力された時だけ送る
+          return row;
+        });
+        const { error: e3 } = await db.from('round_players').insert(rows);
+        if (e3) throw e3;
+
+        await fetchAllData();
+        renderRoundsList();
+        loadDetailSession(currentSessionId);
+        if (goNext) openRoundEditor(null);
+        else closeModal('roundEditModal');
+      } catch (e) {
+        console.error('局の保存エラー:', e);
+        err.innerText = '保存に失敗しました：' + (e.message || e);
+      }
+    }
+
+    async function deleteRound() {
+      if (!ed.roundId || !confirm(`${ed.no}局目の記録を削除しますか？`)) return;
+      const { error } = await db.from('rounds').delete().eq('id', ed.roundId);
+      if (error) { document.getElementById('round-edit-error').innerText = '削除に失敗しました：' + error.message; return; }
+      await fetchAllData();
+      closeModal('roundEditModal');
+      renderRoundsList();
+      loadDetailSession(currentSessionId);
+    }
+
+    async function deleteGameFromRoundsModal() {
+      closeModal('roundsModal');
+      await confirmDeleteGame(rmGameId, rmGameNumber);
+    }
+
+    // ===== 局スタッツ（戦績タブ） =====
+    function renderRoundStats(mId) {
+      const grid = document.getElementById('round-stats-grid');
+      const cnt = document.getElementById('round-stats-count');
+      const sessionDate = {};
+      sessions.forEach(s => sessionDate[s.id] = s.play_date);
+      const gameSession = {};
+      allGames.forEach(g => gameSession[g.id] = g.session_id);
+
+      // 分母は「この人が参加している、局データ入力済みの局」だけ
+      const my = [];
+      const gamesWithData = new Set();
+      allRounds.forEach(r => {
+        const sid = gameSession[r.game_id];
+        if (!sid || !isDateInPeriod(sessionDate[sid])) return;
+        const rp = roundPlayersMap[r.id];
+        if (!rp || !rp[mId]) return;
+        my.push({ r, rp, me: rp[mId] });
+        gamesWithData.add(r.game_id);
+      });
+
+      const recentOn = document.getElementById('stats-recent-check').checked;
+      if (my.length === 0) {
+        cnt.innerText = '';
+        grid.innerHTML = '<div style="grid-column:1/-1; font-size:0.72rem; color:#94a3b8; padding:6px 0;">この期間の局データはまだありません（詳細画面で半荘番号をタップして入力）</div>';
+        return;
+      }
+      cnt.innerText = `入力済み ${my.length}局（${gamesWithData.size}半荘）${recentOn ? '・期間内通算' : ''}`;
+
+      const n = my.length;
+      const wins = my.filter(x => x.me.is_win);
+      const tsumo = wins.filter(x => x.r.result === 'tsumo');
+      const deals = my.filter(x => x.me.is_dealin);
+      const riichi = my.filter(x => x.me.is_riichi);
+      const furo = my.filter(x => x.me.is_furo);
+      const ryu = my.filter(x => x.r.result === 'ryukyoku');
+      const ryuTen = ryu.filter(x => x.me.is_tenpai);
+      const pct = (a, b) => b > 0 ? (a / b * 100) : null;
+      const fmt = v => v === null ? '-' : `${v.toFixed(1)} %`;
+
+      const winPts = wins.map(x => Number(x.me.win_points)).filter(v => v > 0);
+      // 放銃点: ロンした全員の打点が入力されている局だけ
+      const dealPts = deals.map(x => {
+        const ws = Object.values(x.rp).filter(p => p.is_win);
+        return ws.every(p => p.win_points > 0) ? ws.reduce((a, p) => a + Number(p.win_points), 0) : null;
+      }).filter(v => v !== null);
+      const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+      const avgWin = avg(winPts), avgDeal = avg(dealPts);
+
+      const winRate = pct(wins.length, n), dealRate = pct(deals.length, n);
+      const balance = winRate - dealRate;
+      const cards = [
+        ['和了率', fmt(winRate), `ツモ ${fmt(pct(tsumo.length, wins.length)).replace(' ', '')}${avgWin ? `｜平均 ${avgWin.toLocaleString()}点` : ''}`],
+        ['放銃率', fmt(dealRate), avgDeal ? `平均 ${avgDeal.toLocaleString()}点` : `${deals.length}回 / ${n}局`],
+        ['立直率', fmt(pct(riichi.length, n)), riichi.length ? `立直後の和了 ${fmt(pct(riichi.filter(x => x.me.is_win).length, riichi.length)).replace(' ', '')}` : '立直なし'],
+        ['副露率', fmt(pct(furo.length, n)), furo.length ? `副露後の和了 ${fmt(pct(furo.filter(x => x.me.is_win).length, furo.length)).replace(' ', '')}` : '副露なし'],
+        ['流局時聴牌率', fmt(pct(ryuTen.length, ryu.length)), ryu.length ? `${ryuTen.length} / ${ryu.length} 流局` : '流局なし'],
+        ['和了−放銃', `<span class="${balance >= 0 ? 'pt-plus' : 'pt-minus'}">${balance >= 0 ? '+' : ''}${balance.toFixed(1)} %</span>`, '攻守バランス'],
+      ];
+      grid.innerHTML = cards.map(([label, val, sub]) => `
+        <div class="stat-card">
+          <div style="font-size:0.66rem; color:#64748b;">${label}</div>
+          <div style="font-size:0.92rem; font-weight:bold;">${val}</div>
+          <div style="font-size:0.59rem; color:#64748b; margin-top:1px;">${sub}</div>
+        </div>`).join('');
     }
 
     function openSettingsModal() { document.getElementById('settingsModal').classList.add('active'); }
@@ -1768,6 +2134,7 @@
       const mId = document.getElementById('stats-member-select').value;
       if (!mId || !window.cachedStats) return;
       const baseSt = window.cachedStats[mId];
+      renderRoundStats(mId);
       const recentMode = document.getElementById('stats-recent-check').checked && baseSt && baseSt.gamesCount > 0;
       const recentN = recentMode ? Math.min(10, baseSt.gameLog.length) : 0;
       const st = recentMode ? { ...baseSt, ...summarizeLogs(baseSt.gameLog.slice(-10)) } : baseSt;
