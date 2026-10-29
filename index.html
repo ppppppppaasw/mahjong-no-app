@@ -92,6 +92,13 @@
     /* 局記録 */
     .round-row { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 7px 4px; border-bottom: 1px solid #edf2f7; font-size: 0.78rem; cursor: pointer; }
     .round-row:active { background: #f1f5f9; }
+    .res-tag { display: inline-block; font-size: 0.66rem; font-weight: bold; padding: 1px 5px; border-radius: 3px; margin-right: 3px; color: #fff; }
+    .res-tag.tsumo { background: #15803d; } .res-tag.ron { background: #c2410c; } .res-tag.ryukyoku { background: #64748b; }
+    .mini-btn { font-size: 0.68rem; padding: 3px 7px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer; white-space: nowrap; }
+    .mini-btn.danger { color: #b91c1c; border-color: #fecaca; }
+    .player-chip { display: inline-flex; align-items: center; gap: 3px; padding: 3px 7px; border-radius: 12px; border: 1px solid #cbd5e1; background: #fff; font-size: 0.74rem; cursor: pointer; }
+    .player-chip.sel { border-color: var(--header-bg); background: #dbe4d8; font-weight: bold; }
+    .pt-chip { font-size: 0.66rem; padding: 2px 6px; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; }
     .round-tag { display: inline-block; font-size: 0.62rem; padding: 0 4px; border-radius: 3px; margin-left: 3px; background: #e2e8f0; color: #334155; }
     .res-btn { flex: 1; padding: 8px 0; border-radius: 6px; border: 2px solid #cbd5e1; background: #fff; font-weight: bold; font-size: 0.85rem; cursor: pointer; }
     .res-btn.on { border-color: var(--header-bg); background: var(--header-bg); color: #fff; }
@@ -513,11 +520,11 @@
         <span id="rounds-modal-title" style="font-weight:bold; font-size:0.94rem;">🀄 局記録</span>
         <span onclick="closeModal('roundsModal')" style="cursor:pointer; font-weight:bold;">✕</span>
       </div>
+      <div id="rounds-players"></div>
       <div id="rounds-modal-body"></div>
-      <div style="display:flex; gap:6px; margin-top:10px;">
-        <button class="btn" style="flex:2;" id="rounds-add-btn" onclick="openRoundEditor(null)">＋ 局を追加</button>
-        <button class="btn btn-danger" style="flex:1;" onclick="deleteGameFromRoundsModal()">🗑 半荘削除</button>
-      </div>
+      <button class="btn" style="width:100%; margin-top:10px; padding:8px;" id="rounds-add-btn" onclick="openRoundEditor(null)">＋ 局を追加</button>
+      <!-- 半荘の削除は誤操作防止のため一番下に小さく置き、2段階で確認する -->
+      <div id="rounds-danger" style="margin-top:22px; text-align:center;"></div>
     </div>
   </div>
 
@@ -1241,11 +1248,12 @@
     // ===== バージョン =====
     // 新しいものを上に追加していく
     const VERSION_HISTORY = [
+      ['v2.5', '2026-10-29', ['局記録の画面を改善：各局に編集・削除ボタン、結果を色分け表示', '参加者を名前タップで入れ替えできるように（記録済みの局も一緒に修正）', '半荘削除を画面下に移し、2段階の確認に変更', '打点のよく使う点数をワンタップ入力']],
       ['v2.4', '2026-10-29', ['画面上部にバージョン表記を追加（ここに気づいたあなたはえらい）', 'バージョン履歴を追加']],
       ['v2.3', '2026-10-29', ['局スタッツを10項目に再構成（ツモ率・ロン率・平均打点・平均放銃点・被ツモ率を追加）', '「和了−放銃」を廃止', '比べたい項目が横に並ぶよう配置を整理']],
       ['v2.2', '2026-10-20', ['期間設定の初期表示を「今の半期」に変更']],
       ['v2.1', '2026-10-20', ['データが1000件を超えても全件読み込めるように修正（約250半荘で集計が欠ける問題の対策）']],
-      ['v2.0', '2026-10-20', ['局記録を追加：和了・放銃・リーチ・副露・聴牌・打点を1局ずつ入力', '半荘番号のタップで局記録を開くように変更（半荘削除はその中へ移動）', '戦績タブに局スタッツを追加']],
+      ['v2.0', '2026-10-20', ['局記録を追加：和了・放銃・リーチ・副露・聴牌・打点を1局ずつ入力', '※局記録の入力は任意です。入力しなくても、点数入力・戦績などは今までどおり使えます', '半荘番号のタップで局記録を開くように変更（半荘削除はその中へ移動）', '戦績タブに局スタッツを追加']],
       ['v1.6', '2026-10-19', ['比較タブ：グラフは未選択スタート、相性表・直接対決・同卓成績でメンバー選択を分離', '記録タブ：個人ごとの記録表示、リアルタイム記録を上位2名に']],
       ['v1.5', '2026-10-19', ['比較タブに能力レーダー・相性表・同卓メンバー別成績を追加', '個人スタッツに「直近10戦」表示を追加']],
       ['v1.4', '2026-10-19', ['Pt推移の複数人比較グラフを追加', '直接対決を先着率ベースに', '記録タブに不名誉な記録・リアルタイム記録を追加']],
@@ -1272,21 +1280,30 @@
     let rmPlayersOverride = {}; // game_id -> [member_id]（参加者を手動で選んだ場合）
     let ed = null;              // 編集中の局
 
+    let rmSwapFrom = null;      // 入れ替え中のメンバー
+    let rmEditingPlayers = false;
+
+    function scoredPlayersOf(gId) {
+      return allMembers.filter(m => scoresMap[`${gId}_${m.id}`] !== undefined && scoresMap[`${gId}_${m.id}`] !== null);
+    }
+
+    // 参加者の決め方: 局記録がある → その4人 / 手動で選んだ → その4人 / 点数が4人分 → その4人 / 対局日のメンバーが4人 → その4人
     function playersOfGame(gId) {
-      const scored = allMembers.filter(m => scoresMap[`${gId}_${m.id}`] !== undefined && scoresMap[`${gId}_${m.id}`] !== null);
-      if (scored.length === 4) return scored;
       const rs = roundsByGame[gId] || [];
       if (rs.length > 0 && roundPlayersMap[rs[0].id]) {
         const ids = Object.keys(roundPlayersMap[rs[0].id]);
         if (ids.length === 4) return allMembers.filter(m => ids.includes(m.id));
       }
       if (rmPlayersOverride[gId]) return allMembers.filter(m => rmPlayersOverride[gId].includes(m.id));
+      const scored = scoredPlayersOf(gId);
+      if (scored.length === 4) return scored;
       if (currentSessionMembers.length === 4) return currentSessionMembers;
       return null; // 参加者が確定できない
     }
 
     function openRoundsModal(gId, gNum) {
       rmGameId = gId; rmGameNumber = gNum;
+      rmSwapFrom = null; rmEditingPlayers = false;
       document.getElementById('rounds-modal-title').innerText = `🀄 第${gNum}半荘の局記録`;
       renderRoundsList();
       document.getElementById('roundsModal').classList.add('active');
@@ -1300,11 +1317,11 @@
       const deal = ids.find(id => rp[id].is_dealin);
       const pts = id => rp[id].win_points ? `(${Number(rp[id].win_points).toLocaleString()})` : '';
       let main = '';
-      if (r.result === 'tsumo') main = `<b>ツモ</b> ${wins.map(id => nm(id) + pts(id)).join('・')}`;
-      else if (r.result === 'ron') main = `<b>ロン</b> ${wins.map(id => nm(id) + pts(id)).join('・')} ← ${deal ? nm(deal) : '?'}`;
+      if (r.result === 'tsumo') main = `<span class="res-tag tsumo">ツモ</span>${wins.map(id => nm(id) + pts(id)).join('・')}`;
+      else if (r.result === 'ron') main = `<span class="res-tag ron">ロン</span>${wins.map(id => nm(id) + pts(id)).join('・')} ← ${deal ? nm(deal) : '?'}`;
       else {
         const tp = ids.filter(id => rp[id].is_tenpai);
-        main = `<b>流局</b> ${tp.length ? '聴: ' + tp.map(nm).join('・') : '全員ノーテン'}`;
+        main = `<span class="res-tag ryukyoku">流局</span>${tp.length ? '聴: ' + tp.map(nm).join('・') : '全員ノーテン'}`;
       }
       const ri = ids.filter(id => rp[id].is_riichi), fu = ids.filter(id => rp[id].is_furo);
       const tags = (ri.length ? `<span class="round-tag">立 ${ri.map(nm).join('・')}</span>` : '') +
@@ -1314,33 +1331,114 @@
 
     function renderRoundsList() {
       const body = document.getElementById('rounds-modal-body');
+      const pBox = document.getElementById('rounds-players');
       const players = playersOfGame(rmGameId);
       const addBtn = document.getElementById('rounds-add-btn');
-      if (!players) {
-        // 参加者が4人に決まらない場合は先に選んでもらう
+      renderGameDeleteArea(false);
+
+      // --- 参加者が未確定 or 選び直し中: 4人選ぶ ---
+      if (!players || rmEditingPlayers) {
         addBtn.style.display = 'none';
-        const cand = currentSessionMembers.length ? currentSessionMembers : allMembers;
+        const cand = currentSessionMembers.length >= 4 ? currentSessionMembers : allMembers;
+        const cur = new Set((players || []).map(m => m.id));
+        pBox.innerHTML = '';
         body.innerHTML = `<div style="font-size:0.78rem; margin-bottom:6px;">この半荘の参加者を4人選んでください</div>
           <div class="pick-row" id="rm-player-pick">${cand.map(m => `
-            <div class="pick-btn" data-id="${m.id}" onclick="this.classList.toggle('on')">${renderAvatarHtml(m, 'avatar-sm')}<span>${m.name}</span></div>`).join('')}</div>
-          <button class="btn" style="width:100%; margin-top:8px;" onclick="confirmRoundPlayers()">決定</button>`;
+            <div class="pick-btn ${cur.has(m.id) ? 'on' : ''}" data-id="${m.id}" onclick="this.classList.toggle('on')">${renderAvatarHtml(m, 'avatar-sm')}<span>${m.name}</span></div>`).join('')}</div>
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            ${players ? '<button class="btn btn-secondary" style="flex:1;" onclick="rmEditingPlayers=false; renderRoundsList()">キャンセル</button>' : ''}
+            <button class="btn" style="flex:2;" onclick="confirmRoundPlayers()">決定</button>
+          </div>`;
         return;
       }
       addBtn.style.display = '';
       const rs = roundsByGame[rmGameId] || [];
+
+      // --- 参加者の表示（名前タップで1人ずつ入れ替え） ---
+      const scored = scoredPlayersOf(rmGameId);
+      const mismatch = scored.length === 4 && scored.some(m => !players.some(p => p.id === m.id));
+      let ph = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:0.72rem; color:#64748b; font-weight:bold;">参加者</span>
+          <span style="font-size:0.62rem; color:#94a3b8;">名前をタップで入れ替え</span></div>
+        <div style="display:flex; flex-wrap:wrap; gap:4px;">${players.map(m => `
+          <span class="player-chip ${rmSwapFrom === m.id ? 'sel' : ''}" onclick="startSwap('${m.id}')">${renderAvatarHtml(m, 'avatar-sm')}${m.name}</span>`).join('')}</div>`;
+      if (rmSwapFrom) {
+        const from = allMembers.find(m => m.id === rmSwapFrom);
+        const others = allMembers.filter(m => !players.some(p => p.id === m.id));
+        ph += `<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:6px; margin-top:6px;">
+            <div style="font-size:0.72rem; margin-bottom:4px;"><b>${from.name}</b> を誰と入れ替えますか？${rs.length ? `<br><span style="color:#64748b;">記録済みの${rs.length}局も、${from.name}の分がそのまま入れ替わります</span>` : ''}</div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px;">${others.length ? others.map(m => `
+              <span class="player-chip" onclick="doSwap('${rmSwapFrom}', '${m.id}')">${renderAvatarHtml(m, 'avatar-sm')}${m.name}</span>`).join('') : '<span style="font-size:0.72rem; color:#94a3b8;">入れ替えられるメンバーがいません</span>'}</div>
+            <div style="text-align:right; margin-top:4px;"><button class="mini-btn" onclick="rmSwapFrom=null; renderRoundsList()">やめる</button></div>
+          </div>`;
+      }
+      if (mismatch) {
+        ph += `<div style="font-size:0.68rem; color:#b45309; background:#fffbeb; border-radius:4px; padding:4px 6px; margin-top:6px;">⚠ 点数表に入力されているメンバー（${scored.map(m => m.name).join('・')}）と参加者が違います</div>`;
+      }
+      pBox.innerHTML = ph + '<div style="border-bottom:1px solid #e2e8f0; margin:8px 0 2px;"></div>';
+
+      // --- 局の一覧 ---
       body.innerHTML = rs.length === 0
         ? '<div style="font-size:0.78rem; color:#64748b; padding:8px 0;">まだ局の記録はありません。「＋ 局を追加」から1局ずつ入力できます。<br>（入力は任意です。入力した局だけが局スタッツに集計されます）</div>'
-        : rs.map((r, i) => `<div class="round-row" onclick="openRoundEditor('${r.id}')">
-              <span style="color:#64748b; width:18px;">${i + 1}</span>
+        : rs.map((r, i) => `<div class="round-row" style="cursor:default;">
+              <span style="color:#64748b; width:18px; flex-shrink:0;">${i + 1}</span>
               <span style="flex-grow:1;">${roundSummaryHtml(r, players)}</span>
-              <span style="color:#94a3b8;">›</span></div>`).join('');
+              <span style="display:flex; gap:4px; flex-shrink:0;">
+                <button class="mini-btn" onclick="openRoundEditor('${r.id}')">編集</button>
+                <button class="mini-btn danger" onclick="deleteRoundById('${r.id}', ${i + 1})">削除</button>
+              </span></div>`).join('');
+    }
+
+    function startSwap(mId) {
+      rmSwapFrom = rmSwapFrom === mId ? null : mId;
+      renderRoundsList();
+    }
+
+    async function doSwap(oldId, newId) {
+      const players = playersOfGame(rmGameId);
+      const rs = roundsByGame[rmGameId] || [];
+      if (rs.length) {
+        // この半荘の局記録の、そのメンバーの行をまるごと新しいメンバーに付け替える
+        const { error } = await db.from('round_players').update({ member_id: newId })
+          .in('round_id', rs.map(r => r.id)).eq('member_id', oldId);
+        if (error) { alert('入れ替えに失敗しました：' + error.message); return; }
+      }
+      rmPlayersOverride[rmGameId] = players.map(m => m.id === oldId ? newId : m.id);
+      rmSwapFrom = null;
+      await fetchAllData();
+      renderRoundsList();
+      loadDetailSession(currentSessionId);
     }
 
     function confirmRoundPlayers() {
       const ids = [...document.querySelectorAll('#rm-player-pick .pick-btn.on')].map(el => el.dataset.id);
       if (ids.length !== 4) { alert('4人選んでください'); return; }
       rmPlayersOverride[rmGameId] = ids;
+      rmEditingPlayers = false;
       renderRoundsList();
+    }
+
+    function renderGameDeleteArea(confirming) {
+      const box = document.getElementById('rounds-danger');
+      const n = (roundsByGame[rmGameId] || []).length;
+      box.innerHTML = !confirming
+        ? `<span onclick="renderGameDeleteArea(true)" style="font-size:0.7rem; color:#94a3b8; text-decoration:underline; cursor:pointer;">この半荘を削除する</span>`
+        : `<div style="border:2px solid #fca5a5; background:#fef2f2; border-radius:8px; padding:8px; text-align:left;">
+            <div style="font-size:0.78rem; font-weight:bold; color:#991b1b;">第${rmGameNumber}半荘を丸ごと削除します</div>
+            <div style="font-size:0.7rem; color:#7f1d1d; margin:3px 0 6px;">この半荘の点数${n ? `と局記録（${n}局）` : ''}がすべて消え、元に戻せません。<br>1局だけ消したいときは、各局の「削除」を使ってください。</div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-secondary" style="flex:1;" onclick="renderGameDeleteArea(false)">やめる</button>
+              <button class="btn btn-danger" style="flex:1;" onclick="deleteGameFromRoundsModal()">半荘を削除</button>
+            </div></div>`;
+    }
+
+    async function deleteRoundById(roundId, no) {
+      if (!confirm(`${no}局目の記録を削除しますか？`)) return;
+      const { error } = await db.from('rounds').delete().eq('id', roundId);
+      if (error) { alert('削除に失敗しました：' + error.message); return; }
+      await fetchAllData();
+      renderRoundsList();
+      loadDetailSession(currentSessionId);
     }
 
     function openRoundEditor(roundId) {
@@ -1403,8 +1501,10 @@
             const m = P.find(x => x.id === id);
             return `<div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:0.78rem;">
                 <span style="width:70px;">${m.name}</span>
-                <input type="number" inputmode="numeric" class="period-input" style="flex:1;" placeholder="例: 7700"
-                  value="${ed.points[id] ?? ''}" oninput="ed.points['${id}'] = this.value"></div>`;
+                <input type="number" inputmode="numeric" class="period-input" style="flex:1;" placeholder="例: 7700" id="pt-in-${id}"
+                  value="${ed.points[id] ?? ''}" oninput="ed.points['${id}'] = this.value"></div>
+              <div style="display:flex; flex-wrap:wrap; gap:3px; margin:0 0 6px 76px;">${[1000, 2000, 3900, 5200, 7700, 8000, 12000, 18000].map(v =>
+                `<span class="pt-chip" onclick="ed.points['${id}']=${v}; document.getElementById('pt-in-${id}').value=${v}">${v.toLocaleString()}</span>`).join('')}</div>`;
           }).join('');
         }
       }
