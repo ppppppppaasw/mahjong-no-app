@@ -218,7 +218,10 @@
 <body>
 
   <header>
-    <span id="header-title">対局履歴</span>
+    <span style="display:flex; align-items:baseline; gap:6px;">
+      <span id="header-title">対局履歴</span>
+      <span id="app-version" onclick="openVersionModal()" style="font-size:0.6rem; font-weight:normal; opacity:0.5;"></span>
+    </span>
     <button class="header-btn" id="header-action-btn" onclick="openMasterMemberModal()">
       <span>👥</span> メンバー管理
     </button>
@@ -489,6 +492,17 @@
         <span onclick="closeModal('addSessionMemberModal')" style="cursor:pointer; font-weight:bold;">✕</span>
       </div>
       <div id="sessionMemberSelectList" style="max-height:240px; overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <!-- バージョン履歴モーダル -->
+  <div class="modal" id="versionModal">
+    <div class="modal-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-weight:bold; font-size:0.94rem;">📜 バージョン履歴</span>
+        <span onclick="closeModal('versionModal')" style="cursor:pointer; font-weight:bold;">✕</span>
+      </div>
+      <div id="version-history"></div>
     </div>
   </div>
 
@@ -1224,6 +1238,35 @@
       }
     }
 
+    // ===== バージョン =====
+    // 新しいものを上に追加していく
+    const VERSION_HISTORY = [
+      ['v2.4', '2026-10-29', ['画面上部にバージョン表記を追加（ここに気づいたあなたはえらい）', 'バージョン履歴を追加']],
+      ['v2.3', '2026-10-29', ['局スタッツを10項目に再構成（ツモ率・ロン率・平均打点・平均放銃点・被ツモ率を追加）', '「和了−放銃」を廃止', '比べたい項目が横に並ぶよう配置を整理']],
+      ['v2.2', '2026-10-20', ['期間設定の初期表示を「今の半期」に変更']],
+      ['v2.1', '2026-10-20', ['データが1000件を超えても全件読み込めるように修正（約250半荘で集計が欠ける問題の対策）']],
+      ['v2.0', '2026-10-20', ['局記録を追加：和了・放銃・リーチ・副露・聴牌・打点を1局ずつ入力', '半荘番号のタップで局記録を開くように変更（半荘削除はその中へ移動）', '戦績タブに局スタッツを追加']],
+      ['v1.6', '2026-10-19', ['比較タブ：グラフは未選択スタート、相性表・直接対決・同卓成績でメンバー選択を分離', '記録タブ：個人ごとの記録表示、リアルタイム記録を上位2名に']],
+      ['v1.5', '2026-10-19', ['比較タブに能力レーダー・相性表・同卓メンバー別成績を追加', '個人スタッツに「直近10戦」表示を追加']],
+      ['v1.4', '2026-10-19', ['Pt推移の複数人比較グラフを追加', '直接対決を先着率ベースに', '記録タブに不名誉な記録・リアルタイム記録を追加']],
+      ['v1.3', '2026-10-19', ['記録タブを新設（最高持ち点・連続記録など）']],
+      ['v1.2', '2026-10-19', ['平均PtのSDを追加', '比較タブを新設し、対人戦績を移動']],
+      ['v1.1', '2026-10-19', ['同点時の着順判定を修正（同点は上位扱い）', '平均Pt/局・飛び率を追加']],
+      ['v1.0', '', ['対局記録・点数入力・戦績統計の基本機能']],
+    ];
+    document.getElementById('app-version').innerText = VERSION_HISTORY[0][0];
+
+    function openVersionModal() {
+      document.getElementById('version-history').innerHTML = VERSION_HISTORY.map(([v, d, items], i) => `
+        <div style="padding:6px 2px; border-bottom:1px dashed #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline;">
+            <span style="font-weight:bold; font-size:0.85rem;">${v}${i === 0 ? ' <span style="font-size:0.6rem; color:#15803d;">現在</span>' : ''}</span>
+          </div>
+          <ul style="margin:3px 0 0 16px; padding:0; font-size:0.72rem; color:#475569;">${items.map(t => `<li>${t}</li>`).join('')}</ul>
+        </div>`).join('');
+      document.getElementById('versionModal').classList.add('active');
+    }
+
     // ===== 局記録 =====
     let rmGameId = null, rmGameNumber = null;
     let rmPlayersOverride = {}; // game_id -> [member_id]（参加者を手動で選んだ場合）
@@ -1495,20 +1538,28 @@
       const avgWin = avg(winPts), avgDeal = avg(dealPts);
 
       const winRate = pct(wins.length, n), dealRate = pct(deals.length, n);
-      const balance = winRate - dealRate;
+      const ron = wins.filter(x => x.r.result === 'ron');
+      // 被ツモ: 自分以外がツモ和了した局
+      const hiTsumo = my.filter(x => x.r.result === 'tsumo' && !x.me.is_win);
+      const pctS = (a, b) => fmt(pct(a, b)).replace(' ', '');
+      // 2列表示なので、比べたい項目どうしが横に並ぶ順番にしている
       const cards = [
-        ['和了率', fmt(winRate), `ツモ ${fmt(pct(tsumo.length, wins.length)).replace(' ', '')}${avgWin ? `｜平均 ${avgWin.toLocaleString()}点` : ''}`],
-        ['放銃率', fmt(dealRate), avgDeal ? `平均 ${avgDeal.toLocaleString()}点` : `${deals.length}回 / ${n}局`],
-        ['立直率', fmt(pct(riichi.length, n)), riichi.length ? `立直後の和了 ${fmt(pct(riichi.filter(x => x.me.is_win).length, riichi.length)).replace(' ', '')}` : '立直なし'],
-        ['副露率', fmt(pct(furo.length, n)), furo.length ? `副露後の和了 ${fmt(pct(furo.filter(x => x.me.is_win).length, furo.length)).replace(' ', '')}` : '副露なし'],
-        ['流局時聴牌率', fmt(pct(ryuTen.length, ryu.length)), ryu.length ? `${ryuTen.length} / ${ryu.length} 流局` : '流局なし'],
-        ['和了−放銃', `<span class="${balance >= 0 ? 'pt-plus' : 'pt-minus'}">${balance >= 0 ? '+' : ''}${balance.toFixed(1)} %</span>`, '攻守バランス'],
+        ['和了率', fmt(winRate), ''],
+        ['放銃率', fmt(dealRate), ''],
+        ['ツモ率', fmt(pct(tsumo.length, n)), wins.length ? `和了の ${pctS(tsumo.length, wins.length)}` : ''],
+        ['ロン率', fmt(pct(ron.length, n)), wins.length ? `和了の ${pctS(ron.length, wins.length)}` : ''],
+        ['平均打点', avgWin ? `${avgWin.toLocaleString()} 点` : '-', ''],
+        ['平均放銃点', avgDeal ? `${avgDeal.toLocaleString()} 点` : '-', ''],
+        ['立直率', fmt(pct(riichi.length, n)), riichi.length ? `立直後の和了 ${pctS(riichi.filter(x => x.me.is_win).length, riichi.length)}` : ''],
+        ['副露率', fmt(pct(furo.length, n)), furo.length ? `副露後の和了 ${pctS(furo.filter(x => x.me.is_win).length, furo.length)}` : ''],
+        ['流局時聴牌率', fmt(pct(ryuTen.length, ryu.length)), ''],
+        ['被ツモ率', fmt(pct(hiTsumo.length, n)), ''],
       ];
       grid.innerHTML = cards.map(([label, val, sub]) => `
         <div class="stat-card">
           <div style="font-size:0.66rem; color:#64748b;">${label}</div>
           <div style="font-size:0.92rem; font-weight:bold;">${val}</div>
-          <div style="font-size:0.59rem; color:#64748b; margin-top:1px;">${sub}</div>
+          ${sub ? `<div style="font-size:0.59rem; color:#64748b; margin-top:1px;">${sub}</div>` : ''}
         </div>`).join('');
     }
 
