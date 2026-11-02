@@ -107,6 +107,14 @@
     .pick-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px; border-radius: 6px; border: 2px solid #e2e8f0; background: #fff; font-size: 0.7rem; cursor: pointer; }
     .pick-btn.on { border-color: var(--header-bg); background: #dbe4d8; font-weight: bold; }
     .pick-btn.on-red { border-color: #b91c1c; background: #fee2e2; font-weight: bold; }
+    .round-edit-content { border-radius: 12px; width: calc(100% - 16px); max-height: 94vh; padding: 14px 14px 0; }
+    .round-edit-content .pick-btn { padding: 9px 2px; font-size: 0.78rem; }
+    .round-edit-content .res-btn { padding: 10px 0; }
+    .round-edit-content .pick-label { margin-top: 10px; }
+    .round-edit-content .btn { padding: 10px; font-size: 0.88rem; }
+    .round-edit-footer { position: sticky; bottom: 0; background: #fff; padding: 6px 0 14px; margin-top: 8px; border-top: 1px solid #edf2f7; }
+    .ed-sec.dim { opacity: 0.4; }
+    .ed-hint { font-size: 0.62rem; color: #94a3b8; font-weight: normal; margin-left: 4px; }
     .pick-btn.disabled { opacity: 0.35; pointer-events: none; }
 
     /* 比較 */
@@ -278,7 +286,7 @@
             <button class="btn btn-sm btn-secondary" onclick="addNewGame()">＋ 半荘追加</button>
           </div>
         </div>
-        <p style="font-size: 0.66rem; color: #64748b; margin-bottom: 6px;">マス目をタップしてスコアを入力　／　半荘番号をタップで局記録・削除</p>
+        <p style="font-size: 0.66rem; color: #64748b; margin-bottom: 6px;">マス目をタップしてスコアを入力　／　半荘番号をタップで局の一覧・半荘削除</p>
 
         <div style="overflow-x: auto;">
           <table>
@@ -295,6 +303,7 @@
             </tfoot>
           </table>
         </div>
+        <button class="btn" id="quick-round-btn" style="width:100%; margin-top:8px; padding:8px;" onclick="quickRoundInput()">🀄 局を入力</button>
       </div>
     </div>
 
@@ -529,15 +538,17 @@
   </div>
 
   <!-- 1局の入力モーダル -->
-  <div class="modal" id="roundEditModal" style="z-index:210;">
-    <div class="modal-content">
+  <div class="modal" id="roundEditModal" style="z-index:210; align-items:center;">
+    <div class="modal-content round-edit-content">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
         <span id="round-edit-title" style="font-weight:bold; font-size:0.94rem;">局の入力</span>
         <span onclick="closeModal('roundEditModal')" style="cursor:pointer; font-weight:bold;">✕</span>
       </div>
       <div id="round-edit-body"></div>
-      <div id="round-edit-error" style="color:#b91c1c; font-size:0.75rem; min-height:1em; margin-top:6px;"></div>
-      <div style="display:flex; gap:6px; margin-top:4px;" id="round-edit-buttons"></div>
+      <div class="round-edit-footer">
+        <div id="round-edit-error" style="color:#b91c1c; font-size:0.75rem; min-height:1em; margin-bottom:4px;"></div>
+        <div style="display:flex; gap:6px;" id="round-edit-buttons"></div>
+      </div>
     </div>
   </div>
 
@@ -1132,7 +1143,11 @@
       renderDetailTable(games);
     }
 
+    let detailGames = [];
     function renderDetailTable(games) {
+      detailGames = games;
+      const qb = document.getElementById('quick-round-btn');
+      qb.innerText = games.length ? `🀄 局を入力（第${games[games.length - 1].game_number}半荘）` : '🀄 局を入力';
       const hRow = document.getElementById('detail-header-row');
       hRow.innerHTML = '<th style="width: 38px; min-width: 38px;">半荘</th>';
       currentSessionMembers.forEach(m => {
@@ -1248,6 +1263,8 @@
     // ===== バージョン =====
     // 新しいものを上に追加していく
     const VERSION_HISTORY = [
+      ['v2.7', '2026-11-02', ['点数表の下に「🀄 局を入力」ボタンを追加（一番新しい半荘の入力画面がすぐ開く）', '入力画面のタイトルから半荘を切り替えられるように']],
+      ['v2.6', '2026-10-31', ['局の入力画面を画面中央の大きな表示に変更', 'リーチ・副露・結果・和了・放銃・聴牌・打点を最初から全部表示（どこからでも入力可）', '和了・放銃・聴牌を選ぶと、ツモ/ロン/流局が自動で切り替わるように']],
       ['v2.5', '2026-10-29', ['局記録の画面を改善：各局に編集・削除ボタン、結果を色分け表示', '参加者を名前タップで入れ替えできるように（記録済みの局も一緒に修正）', '半荘削除を画面下に移し、2段階の確認に変更', '打点のよく使う点数をワンタップ入力']],
       ['v2.4', '2026-10-29', ['画面上部にバージョン表記を追加（ここに気づいたあなたはえらい）', 'バージョン履歴を追加']],
       ['v2.3', '2026-10-29', ['局スタッツを10項目に再構成（ツモ率・ロン率・平均打点・平均放銃点・被ツモ率を追加）', '「和了−放銃」を廃止', '比べたい項目が横に並ぶよう配置を整理']],
@@ -1441,6 +1458,24 @@
       loadDetailSession(currentSessionId);
     }
 
+    // 詳細画面の「🀄 局入力」: 一番新しい半荘の入力画面を直接開く
+    function quickRoundInput() {
+      if (!detailGames.length) { alert('先に「＋ 半荘追加」で半荘を作ってください'); return; }
+      const g = detailGames[detailGames.length - 1];
+      rmGameId = g.id; rmGameNumber = g.game_number;
+      rmSwapFrom = null; rmEditingPlayers = false;
+      if (!playersOfGame(g.id)) { openRoundsModal(g.id, g.game_number); return; } // 参加者が決まらない時だけ先に選んでもらう
+      openRoundEditor(null);
+    }
+
+    function switchEditorGame(gId) {
+      const g = detailGames.find(x => x.id === gId);
+      if (!g) return;
+      rmGameId = g.id; rmGameNumber = g.game_number;
+      if (!playersOfGame(g.id)) { closeModal('roundEditModal'); openRoundsModal(g.id, g.game_number); return; }
+      openRoundEditor(null);
+    }
+
     function openRoundEditor(roundId) {
       const players = playersOfGame(rmGameId);
       if (!players) return;
@@ -1459,7 +1494,14 @@
                tenpai: new Set(), riichi: new Set(), furo: new Set(), points: {} };
       }
       ed.players = players;
-      document.getElementById('round-edit-title').innerText = `第${rmGameNumber}半荘　${ed.no}局目`;
+      // 新しい局のときは、タイトルの半荘をその場で切り替えられるようにする
+      const titleEl = document.getElementById('round-edit-title');
+      if (!roundId && detailGames.length > 1) {
+        titleEl.innerHTML = `<select class="period-select" style="font-weight:bold;" onchange="switchEditorGame(this.value)">${detailGames.map(g =>
+          `<option value="${g.id}" ${g.id === rmGameId ? 'selected' : ''}>第${g.game_number}半荘</option>`).join('')}</select>　${ed.no}局目`;
+      } else {
+        titleEl.innerText = `第${rmGameNumber}半荘　${ed.no}局目`;
+      }
       document.getElementById('round-edit-error').innerText = '';
       renderRoundEditor();
       document.getElementById('roundEditModal').classList.add('active');
@@ -1467,17 +1509,22 @@
 
     function edToggle(kind, id) {
       if (kind === 'result') {
-        ed.result = id;
-        if (id === 'tsumo' && ed.win.size > 1) ed.win = new Set([...ed.win].slice(0, 1));
-        if (id !== 'ron') ed.dealin = null;
-        if (id === 'ryukyoku') ed.win = new Set();
+        ed.result = ed.result === id ? null : id;
+        if (ed.result === 'tsumo') { ed.dealin = null; if (ed.win.size > 1) ed.win = new Set([...ed.win].slice(0, 1)); }
+        if (ed.result === 'ryukyoku') { ed.win = new Set(); ed.dealin = null; ed.points = {}; }
+        if (ed.result !== 'ryukyoku') ed.tenpai = new Set();
       } else if (kind === 'win') {
+        if (ed.result === 'ryukyoku' || !ed.result) { ed.result = ed.dealin ? 'ron' : 'tsumo'; ed.tenpai = new Set(); }
         if (ed.result === 'tsumo') ed.win = ed.win.has(id) ? new Set() : new Set([id]);
         else ed.win.has(id) ? ed.win.delete(id) : ed.win.add(id); // ロンはダブロン可
         if (ed.dealin === id) ed.dealin = null;
       } else if (kind === 'dealin') {
         ed.dealin = ed.dealin === id ? null : id;
         ed.win.delete(id);
+        if (ed.dealin) { ed.result = 'ron'; ed.tenpai = new Set(); }
+      } else if (kind === 'tenpai') {
+        if (ed.result !== 'ryukyoku') { ed.result = 'ryukyoku'; ed.win = new Set(); ed.dealin = null; ed.points = {}; }
+        ed.tenpai.has(id) ? ed.tenpai.delete(id) : ed.tenpai.add(id);
       } else {
         ed[kind].has(id) ? ed[kind].delete(id) : ed[kind].add(id);
       }
@@ -1489,30 +1536,39 @@
       const row = (kind, isOn, cls = 'on', disabledFn = () => false) => `<div class="pick-row">${P.map(m => `
           <div class="pick-btn ${isOn(m.id) ? cls : ''} ${disabledFn(m.id) ? 'disabled' : ''}" onclick="edToggle('${kind}', '${m.id}')">
             ${renderAvatarHtml(m, 'avatar-sm')}<span>${m.name}</span></div>`).join('')}</div>`;
-      let h = `<div style="display:flex; gap:6px;">
+      const sec = (dim, label, hint, inner) =>
+        `<div class="ed-sec ${dim ? 'dim' : ''}"><div class="pick-label">${label}<span class="ed-hint">${hint}</span></div>${inner}</div>`;
+      const r = ed.result;
+
+      // 局の流れに合わせて「リーチ・副露 → 結果 → 和了・放銃・聴牌 → 打点」の順に、全部最初から表示
+      let h = '';
+      h += sec(false, 'リーチ', '複数可', row('riichi', id => ed.riichi.has(id)));
+      h += sec(false, '副露', '複数可', row('furo', id => ed.furo.has(id)));
+      h += `<div class="pick-label">結果<span class="ed-hint">下で和了・放銃・聴牌を選ぶと自動で切り替わります</span></div>
+        <div style="display:flex; gap:6px;">
           ${[['tsumo', 'ツモ'], ['ron', 'ロン'], ['ryukyoku', '流局']].map(([k, l]) =>
-            `<button class="res-btn ${ed.result === k ? 'on' : ''}" onclick="edToggle('result', '${k}')">${l}</button>`).join('')}
+            `<button class="res-btn ${r === k ? 'on' : ''}" onclick="edToggle('result', '${k}')">${l}</button>`).join('')}
         </div>`;
-      if (ed.result === 'tsumo' || ed.result === 'ron') {
-        h += `<div class="pick-label">和了${ed.result === 'ron' ? '（ダブロンは複数選択）' : ''}</div>` + row('win', id => ed.win.has(id));
-        if (ed.result === 'ron') h += `<div class="pick-label">放銃</div>` + row('dealin', id => ed.dealin === id, 'on-red', id => ed.win.has(id));
-        if (ed.win.size > 0) {
-          h += `<div class="pick-label">打点（任意・点）</div>` + [...ed.win].map(id => {
-            const m = P.find(x => x.id === id);
-            return `<div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:0.78rem;">
-                <span style="width:70px;">${m.name}</span>
-                <input type="number" inputmode="numeric" class="period-input" style="flex:1;" placeholder="例: 7700" id="pt-in-${id}"
-                  value="${ed.points[id] ?? ''}" oninput="ed.points['${id}'] = this.value"></div>
-              <div style="display:flex; flex-wrap:wrap; gap:3px; margin:0 0 6px 76px;">${[1000, 2000, 3900, 5200, 7700, 8000, 12000, 18000].map(v =>
-                `<span class="pt-chip" onclick="ed.points['${id}']=${v}; document.getElementById('pt-in-${id}').value=${v}">${v.toLocaleString()}</span>`).join('')}</div>`;
-          }).join('');
-        }
+      h += sec(r === 'ryukyoku', '和了', r === 'ron' ? 'ダブロンは複数選択' : '', row('win', id => ed.win.has(id)));
+      h += sec(r === 'tsumo' || r === 'ryukyoku', '放銃', '選ぶとロンになります', row('dealin', id => ed.dealin === id, 'on-red', id => ed.win.has(id)));
+      h += sec(r === 'tsumo' || r === 'ron', '聴牌', '流局時のみ・複数可', row('tenpai', id => ed.tenpai.has(id)));
+
+      // 打点（任意）
+      let pts;
+      if (ed.win.size === 0) {
+        pts = '<div style="font-size:0.7rem; color:#94a3b8; padding:4px 0;">和了した人を選ぶと入力できます</div>';
+      } else {
+        pts = [...ed.win].map(id => {
+          const m = P.find(x => x.id === id);
+          return `<div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:0.78rem;">
+              <span style="width:64px;">${m.name}</span>
+              <input type="number" inputmode="numeric" class="period-input" style="flex:1; padding:6px;" placeholder="例: 7700" id="pt-in-${id}"
+                value="${ed.points[id] ?? ''}" oninput="ed.points['${id}'] = this.value"></div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px; margin:0 0 6px 70px;">${[1000, 2000, 3900, 5200, 7700, 8000, 12000, 18000].map(v =>
+              `<span class="pt-chip" onclick="ed.points['${id}']=${v}; document.getElementById('pt-in-${id}').value=${v}">${v.toLocaleString()}</span>`).join('')}</div>`;
+        }).join('');
       }
-      if (ed.result === 'ryukyoku') h += `<div class="pick-label">聴牌（複数可・なしなら全員ノーテン）</div>` + row('tenpai', id => ed.tenpai.has(id));
-      if (ed.result) {
-        h += `<div class="pick-label">リーチ（複数可）</div>` + row('riichi', id => ed.riichi.has(id));
-        h += `<div class="pick-label">副露（複数可）</div>` + row('furo', id => ed.furo.has(id));
-      }
+      h += sec(r === 'ryukyoku', '打点', '任意', pts);
       document.getElementById('round-edit-body').innerHTML = h;
 
       const btns = document.getElementById('round-edit-buttons');
@@ -1525,7 +1581,7 @@
 
     async function saveRound(goNext) {
       const err = document.getElementById('round-edit-error');
-      if (!ed.result) { err.innerText = '結果（ツモ／ロン／流局）を選んでください'; return; }
+      if (!ed.result) { err.innerText = '和了・放銃・聴牌を選ぶか、結果（ツモ／ロン／流局）を選んでください'; return; }
       if (ed.result !== 'ryukyoku' && ed.win.size === 0) { err.innerText = '和了した人を選んでください'; return; }
       if (ed.result === 'ron' && !ed.dealin) { err.innerText = '放銃した人を選んでください'; return; }
       err.innerText = '保存中...';
