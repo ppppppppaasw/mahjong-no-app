@@ -303,7 +303,13 @@
             </tfoot>
           </table>
         </div>
-        <button class="btn" id="quick-round-btn" style="width:100%; margin-top:8px; padding:8px;" onclick="quickRoundInput()">🀄 局を入力</button>
+        <div style="display:flex; justify-content:flex-end; margin-top:6px;">
+          <button onclick="quickRoundInput()"
+            style="background:#fff; color:#475569; border:1px solid #cbd5e1; border-radius:5px; padding:3px 10px; cursor:pointer; line-height:1.3; text-align:center;">
+            <div id="quick-round-btn" style="font-size:0.7rem;">🀄 局データを記録</div>
+            <div style="font-size:0.56rem; color:#94a3b8;">※点数入力ではありません</div>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1147,7 +1153,7 @@
     function renderDetailTable(games) {
       detailGames = games;
       const qb = document.getElementById('quick-round-btn');
-      qb.innerText = games.length ? `🀄 局を入力（第${games[games.length - 1].game_number}半荘）` : '🀄 局を入力';
+      qb.innerText = games.length ? `🀄 局データを記録（第${games[games.length - 1].game_number}半荘）` : '🀄 局データを記録';
       const hRow = document.getElementById('detail-header-row');
       hRow.innerHTML = '<th style="width: 38px; min-width: 38px;">半荘</th>';
       currentSessionMembers.forEach(m => {
@@ -1263,7 +1269,7 @@
     // ===== バージョン =====
     // 新しいものを上に追加していく
     const VERSION_HISTORY = [
-      ['v2.7', '2026-11-02', ['点数表の下に「🀄 局を入力」ボタンを追加（一番新しい半荘の入力画面がすぐ開く）', '入力画面のタイトルから半荘を切り替えられるように']],
+      ['v2.7', '2026-11-02', ['点数表の下に「🀄 局データを記録」ボタンを追加（一番新しい半荘の入力画面がすぐ開く）', '入力画面のタイトルから半荘を切り替えられるように']],
       ['v2.6', '2026-10-31', ['局の入力画面を画面中央の大きな表示に変更', 'リーチ・副露・結果・和了・放銃・聴牌・打点を最初から全部表示（どこからでも入力可）', '和了・放銃・聴牌を選ぶと、ツモ/ロン/流局が自動で切り替わるように']],
       ['v2.5', '2026-10-29', ['局記録の画面を改善：各局に編集・削除ボタン、結果を色分け表示', '参加者を名前タップで入れ替えできるように（記録済みの局も一緒に修正）', '半荘削除を画面下に移し、2段階の確認に変更', '打点のよく使う点数をワンタップ入力']],
       ['v2.4', '2026-10-29', ['画面上部にバージョン表記を追加（ここに気づいたあなたはえらい）', 'バージョン履歴を追加']],
