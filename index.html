@@ -1269,6 +1269,7 @@
     // ===== バージョン =====
     // 新しいものを上に追加していく
     const VERSION_HISTORY = [
+      ['v2.8', '2026-11-02', ['ツモの打点を「子／親の支払い」で入力できるように（親のツモはオール）', '打点の合計を自動計算して表示']],
       ['v2.7', '2026-11-02', ['点数表の下に「🀄 局データを記録」ボタンを追加（一番新しい半荘の入力画面がすぐ開く）', '入力画面のタイトルから半荘を切り替えられるように']],
       ['v2.6', '2026-10-31', ['局の入力画面を画面中央の大きな表示に変更', 'リーチ・副露・結果・和了・放銃・聴牌・打点を最初から全部表示（どこからでも入力可）', '和了・放銃・聴牌を選ぶと、ツモ/ロン/流局が自動で切り替わるように']],
       ['v2.5', '2026-10-29', ['局記録の画面を改善：各局に編集・削除ボタン、結果を色分け表示', '参加者を名前タップで入れ替えできるように（記録済みの局も一緒に修正）', '半荘削除を画面下に移し、2段階の確認に変更', '打点のよく使う点数をワンタップ入力']],
@@ -1500,6 +1501,9 @@
                tenpai: new Set(), riichi: new Set(), furo: new Set(), points: {} };
       }
       ed.players = players;
+      // ツモの支払い内訳（子・親 / 親ならオール）。DBには合計だけを保存する
+      ed.tp = { ko: '', oya: '', all: '', isOya: false };
+      ed.tpTouched = false;
       // 新しい局のときは、タイトルの半荘をその場で切り替えられるようにする
       const titleEl = document.getElementById('round-edit-title');
       if (!roundId && detailGames.length > 1) {
@@ -1563,6 +1567,27 @@
       let pts;
       if (ed.win.size === 0) {
         pts = '<div style="font-size:0.7rem; color:#94a3b8; padding:4px 0;">和了した人を選ぶと入力できます</div>';
+      } else if (r === 'tsumo') {
+        // ツモ: 子の支払い・親の支払い（親のツモは「オール」）を入れると合計を自動計算
+        const id = [...ed.win][0];
+        const tot = tsumoTotal();
+        if (tot) ed.points[id] = tot;
+        const inp = (field, ph) => `<input type="number" inputmode="numeric" class="period-input" style="width:84px; padding:6px;" placeholder="${ph}"
+            value="${ed.tp[field]}" oninput="onTsumoInput('${field}', this.value)">`;
+        const chip = (label, js) => `<span class="pt-chip" onclick="${js}">${label}</span>`;
+        pts = `<label style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; margin-bottom:6px; cursor:pointer;">
+            <input type="checkbox" ${ed.tp.isOya ? 'checked' : ''} onchange="ed.tp.isOya = this.checked; ed.tpTouched = true; renderRoundEditor()"> 親のツモ（○○オール）</label>`;
+        if (ed.tp.isOya) {
+          pts += `<div style="display:flex; align-items:center; gap:6px; font-size:0.78rem;">${inp('all', '例: 2600')}<span>オール</span></div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px; margin:5px 0;">${[500, 700, 1000, 1300, 2000, 2600, 4000, 6000, 8000].map(v =>
+              chip(`${v.toLocaleString()}オール`, `setTsumoParts({all:${v}})`)).join('')}</div>`;
+        } else {
+          pts += `<div style="display:flex; align-items:center; gap:6px; font-size:0.78rem;">
+              <span>子</span>${inp('ko', '例: 1000')}<span>／ 親</span>${inp('oya', '例: 2000')}</div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px; margin:5px 0;">${[[300, 500], [500, 1000], [700, 1300], [1000, 2000], [1300, 2600], [2000, 4000], [3000, 6000], [4000, 8000]].map(([k, o]) =>
+              chip(`${k.toLocaleString()}-${o.toLocaleString()}`, `setTsumoParts({ko:${k}, oya:${o}})`)).join('')}</div>`;
+        }
+        pts += `<div id="tsumo-total" style="font-size:0.8rem; font-weight:bold; text-align:right;">${tsumoTotalText()}</div>`;
       } else {
         pts = [...ed.win].map(id => {
           const m = P.find(x => x.id === id);
@@ -1574,7 +1599,7 @@
               `<span class="pt-chip" onclick="ed.points['${id}']=${v}; document.getElementById('pt-in-${id}').value=${v}">${v.toLocaleString()}</span>`).join('')}</div>`;
         }).join('');
       }
-      h += sec(r === 'ryukyoku', '打点', '任意', pts);
+      h += sec(r === 'ryukyoku', '打点', '任意　※積み棒（本場）・供託は含めない', pts);
       document.getElementById('round-edit-body').innerHTML = h;
 
       const btns = document.getElementById('round-edit-buttons');
@@ -1583,6 +1608,36 @@
            <button class="btn" style="flex:2;" onclick="saveRound(false)">保存</button>`
         : `<button class="btn btn-secondary" style="flex:1;" onclick="saveRound(false)">保存して閉じる</button>
            <button class="btn" style="flex:2;" onclick="saveRound(true)">保存して次の局へ</button>`;
+    }
+
+    function tsumoTotal() {
+      const t = ed.tp;
+      if (t.isOya) { const a = parseInt(t.all, 10); return a > 0 ? a * 3 : null; }
+      const k = parseInt(t.ko, 10), o = parseInt(t.oya, 10);
+      return (k > 0 && o > 0) ? k * 2 + o : null;
+    }
+
+    function tsumoTotalText() {
+      const tot = tsumoTotal();
+      const id = [...ed.win][0];
+      if (tot) return `合計 ${tot.toLocaleString()}点`;
+      if (!ed.tpTouched && id && ed.points[id]) return `合計 ${Number(ed.points[id]).toLocaleString()}点 <span style="font-weight:normal; color:#94a3b8; font-size:0.65rem;">（入力し直すと上書き）</span>`;
+      return '<span style="color:#94a3b8; font-weight:normal;">合計 -</span>';
+    }
+
+    function onTsumoInput(field, val) {
+      ed.tp[field] = val;
+      ed.tpTouched = true;
+      const id = [...ed.win][0];
+      const tot = tsumoTotal();
+      if (tot) ed.points[id] = tot; else delete ed.points[id];
+      document.getElementById('tsumo-total').innerHTML = tsumoTotalText(); // 入力中のフォーカスを保つため合計だけ更新
+    }
+
+    function setTsumoParts(parts) {
+      Object.assign(ed.tp, parts);
+      ed.tpTouched = true;
+      renderRoundEditor();
     }
 
     async function saveRound(goNext) {
